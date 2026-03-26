@@ -3,7 +3,7 @@ import displayio
 import terminalio
 from adafruit_display_text import label
 
-class ClockScreen(displaio.Group):
+class ClockScreen(displayio.Group):
     def __init__(self, display_width=160, display_height=128):
         super().__init__()
         self.width = display_width
@@ -97,6 +97,7 @@ class ClockScreen(displaio.Group):
         menus = ["Clock", "GitHub", "Gmail", "Tasks"]
         if index == 0:
             #Home state
+            badges = []
             if gh_count > 0: badges.append(f"GH:{gh_count}")
             if mail_count > 0: badges.append(f"Mail:{mail_count}")
             self.status_label.text = " | ".join(badges) if badges else "All caught up!"
