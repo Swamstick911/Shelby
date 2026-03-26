@@ -32,7 +32,7 @@ sends them out for free.
 
 1. Clone the repo
    ```bash
-   git clone https://github.com/yourusername/Shelby
+   git clone https://github.com/Swamstick911/Shelby
    cd Shelby
    ```
 
