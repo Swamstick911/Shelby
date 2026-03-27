@@ -1,62 +1,116 @@
-import displayio
-import terminalio
-from adafruit_display_text import label
+import time
+import st7735
+from src.font import FONT
 
-class GitHubScreen(displayio.Group):
-    def __init__(self, width, height, requests_session, token):
-        super().__init__()
-        self.requests = requests_session
-        self.token = token
-        self.unread_count = 0
+C = st7735.TFT.color
 
-        #Background
-        bg_bitmap = displayio.Bitmap(width, height, 1)
-        bg_palette = displayio.Palette(1)
-        bg_palette[0] = 0x24292E #github dark theme color
-        self.append(displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette))
+#Colors
+_BG = C(8, 12, 24)
+_HEADER = C(36, 41, 46) #Github dark header
+_ACCENT = C(88, 166, 255) #Github blue
+_WHITE = C(240, 240, 240)
+_GRAY = C(110, 118, 125)
+_YELLOW = C(210, 153, 34) # unread dot
+_GREEN = C(63, 185, 119)
+_RED = C(248, 81, 73)
+_ROWSEL = C(22, 27, 34) # selected row bg
 
-        #Header
-        self.header = label.Label(terminalio.FONT, text="Github Notifications", color=0xFFFFFF)
-        self.header.anchor_point = (0.5, 0.0)
-        self.header.anchored_position = (width // 2, 5)
-        self.append(self.header)
+W = 160
+H = 128
+CHAR_W = 6
+CHAR_H = 8
+ROW_H = 11
+MAX_ROWS = 5
+HEADER_H = 14
+FOOTER_H = 10
 
-        #List of items
-        self.list_label = label.Label(terminalio.FONT, text="Loading...", color=0xCCCCCC, line_spacing=0.8)
-        self.list_label,anchor_point = (0.0, 0.0)
-        self.list_label.anchored_position = (5, 25)
-        self.append(self.list_label)
+def _tw(s, scale=1):
+    return len(s) * CHAR_W * scale
 
-    def fetch(self):
-        if not self.requests or not self.token:
-            self.list_label.text = "Offline or missing token"
-            return
+def _cx(s, scale=1):
+    return(W - _tw(s, scale)) // 2
+
+
+class GitHubScreen:
+    def __init__(self, display, secrets):
+        self.display = display
+        self.token = secrets.get("github_token", "")
+        self.notifs = [] # list of ("repo", "title", etc)
+        self.unread = 0
+        self.cursor = 0
+        self.scroll = 0
+        self.status = "I=refresh"
+        self.fetched = False
+        self._last_fetch = 0
         
-        headers = {
-            "Authorisation": f"Bearer {self.token}",
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "Sprig-Shelby"
-        }
+    # Public API
 
+    def draw(self):
+        self._fill(0, 0, W, H, _BG)
+        self._draw_header()
+        self._draw_body()
+        self._draw_footer()
+
+    def update(self):
+        # Auto refresh every 5 minutes after first manual fetch
+        if self.fetched and time.ticks_diff(time.ticks_ms(), self._last_fetch) > 300_000:
+            self.fetch()
+
+    def on_button(self, btn):
+        if btn == "W":
+            if self.cursor > 0:
+                self.cursor -= 1
+                if self.cursor < self.scroll:
+                    self.scroll = self.cursor
+                self._draw_body()
+        elif btn == "S":
+            if self.cursor < len(self.notifs) - 1:
+                self.cursor += 1
+                if self.cursor >= self.scroll + MAX_ROWS:
+                    self.scroll += 1
+                self._draw_body()
+        elif btn == "I":
+            self.fetch()
+        elif btn == "K":
+            if self.notifs:
+                n = self.notifs[self.cursor]
+                n["unread"] = not n["unread"]
+                self.unread = sum(1 for x in self.notifs if x["unread"])
+                self._draw_header()
+                self._draw_body()
+
+        
+    def fetch(self):
+        self.status = "Fetching..."
+        self._draw_footer()
         try:
-            print("Fetching GitHub")
-            resp = self.requests.get("https://api.github.com/notifications",headers=headers)
-            if resp.status_code == 200:
-                data = resp.json()
-                self.unread_count = len(data)
-                
-                if self.unread_count == 0:
-                    self.list_label.text = "Inbox Zero!!"
-                else:
-                    lines = []
-                    #grab only the top 4 so we don't overflow the screen
-                    for item in data[:4]:
-                        title = item['subject']['title'][:22] # truncate long lines
-                        lines.append(f"- {title}")
-                    self.list_label.text = "\n\n".join(lines)
-            else:
-                self.list_label.text = f"API Error: {resp.status_code}"
-            resp.close()
-        except Exception as e:
-            self.list_label.text = "Fetch failed"
-            print(f"GH Error: {e}")
+            import urequests
+            headers = {
+                "Authorisation": "Bearer " + self.token,
+                "User-Agent": "Shelby-Sprig",
+                "Accept": "application/vnd.github.v3+json",
+            }
+            r = urequests.get(
+                "https://api.github.com/notifications?per_page=20&all=false",
+                headers=headers,
+                timeout = 10
+            )
+            code = r.status_code
+            if code == 200:
+                import ujson
+                data = ujson.loads (r.text)
+                r.close()
+                self.notifs = []
+                for n in data:
+                    self.notifs.append({
+                        "repo": n["repository"]["name"][:20],
+                        "title": n["subject"]["title"][:26],
+                        "type": n["subject"]["type"],
+                        "unread": n["unread"],
+                    })
+                self.unread = sum(1 for x in self.notifs if x["unread"])
+                self.status = "{} notif, {} unread".format(len(self.notifs), self.unread)
+                self.fetched = True
+            elif code == 304:
+                r.close()
+                self.status = "No changes"
