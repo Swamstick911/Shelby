@@ -114,3 +114,77 @@ class GitHubScreen:
             elif code == 304:
                 r.close()
                 self.status = "No changes"
+            else:
+                r.close()
+                self.status = "HTTP {}".format(code)
+        except MemmoryError:
+            self.status = "Out of memory!"
+        except Exception as e:
+            self.status = str(e)[:22]
+        self.cursor = 0
+        self.scroll = 0
+        self._last_fetch = time.ticks_ms()
+        self.draw()
+
+    # Draw helpers
+
+    def _draw_header(self):
+        self._fill(0, 0, W, HEADER_H, _HEADER)
+        title = "GitHub"
+        badge = str(self.unread)
+        self._text(title, 4, 3, _WHITE)
+        #Unread badge on the right
+        bx = W - len(badge) * CHAR_W - 6
+        self._fill(bx - 2, 2, len(badge) * CHAR_W + 6, 10, _YELLOW)
+        self._text(badge, bx, 3, _BG)
+
+    def _draw_body(self):
+        y0 = HEADER_H
+        body_h = H - HEADER_H - FOOTER_H
+        self._fill(0, y0, W, body_h, _BG)
+
+        if not self.notifs:
+            msg = "No notifications"
+            self._text(msg, _cx(msg), y0 + body_h // 2 - 4, _GRAY)
+            return
+        
+        visible = self.notifs[self.scroll : self.scroll + MAX_ROWS]
+        y = y0 + 1
+        for i, n in enumerate(visible):
+            real_i = i + self.scroll
+            is_sel = (real_i == self.cursor)
+            row_bg = _ROWSEL if is_sel else _BG
+            self._fill(0, y, W, ROW_H, row_bg)
+
+            #unread dot
+            dot_c = _YELLOW if n["unread"] else _BG
+            self._fill(2, y + 3, 3, 3, dot_c)
+
+            #Repo + title
+            repo_str = n["repo"][:14]
+            title_str = m["title"][:(W // CHAR_W - 2)]
+            label_color = _WHITE if n["unread"] else _GRAY
+            self._text(repo_str + ":", 7, y + 1, _ACCENT)
+            used = len(repo_str) + 1
+            remaining = (W - 7) // CHAR_W - used - 1
+            if remaining > 0:
+                self._text(n["title"][:remaining], 7 + used * CHAR_W, y + 1, label_color)
+                y += ROW_H
+
+        #Scroll bar
+        if len(self.notifs) > MAX_ROWS:
+            sb_h = body_h * MAX_ROWS // len(self.notifs)
+            sb_y = y0 + (body_h * self.scroll) // len(self.notifs)
+            self._fill(W - 2, y0, 2, body_h, _HEADER)
+            self._fill(W - 2, sb_y, 2, sb_h, _ACCENT)
+
+    def _draw_footer(self):
+        self._fill(0, H - FOOTER_H, W, FOOTER_H, _HEADER)
+        s = self.status[:26]
+        self._text(s, 2, H - FOOTER_H + 1, _GRAY)
+
+    def _text(self, s, x, y, color):
+        self.display.text((x, y), s, color, FONT, 1)
+
+    def _fill(self, x, y, w, h, color):
+        self.display.fillrect((x, y), (w, h), color)
