@@ -150,7 +150,7 @@ class TasksScreen:
                 self._fill(W- 2, y0, 2, bh, _HEADER)
                 self._fill(W - 2, sb_y, 2, sb_h, _ACCENT)
 
-    def _draw_footeR(self):
+    def _draw_footer(self):
         self._fill(0, H - FOOTER_H, W, FOOTER_H, _HEADER)
         hint = "W/S:nav K:done J:del"
         self._text(hint, _cx(hint), H - FOOTER_H + 1, _BG)

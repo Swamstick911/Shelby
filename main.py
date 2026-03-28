@@ -17,8 +17,9 @@ spi = SPI(0,
 
 # TFT(spi, DC_pin_number, Reset_pin_number, CS_pin_number)
 display = st7735.TFT(spi, 22, 26, 20)
-display.initr()
+display.initg()
 display.rgb(False)   # BGR mode for Sprig panel
+display.rotation(1) #fixing the landscape orientation
 display.fill(st7735.TFT.BLACK)
 
 # Buttons — exact pins from Sprig HAL source
@@ -126,6 +127,8 @@ while True:
     if wifi_connected and time.ticks_diff(time.ticks_ms(), last_api_fetch) > 300000:
         try:
             import urequests
+            import gc
+            gc.collect()
             headers = {
                 "Authorization": f"Bearer {secrets.get('github_token', '')}",
                 "User-Agent": "Sprig-Shelby"
@@ -134,6 +137,7 @@ while True:
             if r.status_code == 200:
                 gh_count = len(r.json())
             r.close()
+            gc.collect()
         except Exception as e:
             print(f"API refresh failed: {e}")
         last_api_fetch = time.ticks_ms()

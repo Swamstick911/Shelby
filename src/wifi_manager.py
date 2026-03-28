@@ -48,7 +48,7 @@ class WifiManager:
             utc = struct.unpack("!I", msg[40:44])[0] - NTP_DELTA
 
             #Apply the timezone offset
-            offset_seconds = int(self.secrets.get("timezone_offset", 5.5) * 3600)
+            offset_seconds = int(float(self.secrets.get("timezone_offset", 5.5)) * 3600)
             local_time = utc + offset_seconds
 
             #convert to tuple and set rtc
