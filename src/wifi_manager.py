@@ -31,8 +31,7 @@ class WifiManager:
     def sync_time(self):
         #using NTP to sync with UTC and then adding timezone offset
         NTP_HOST = "pool.ntp.org"
-        NTP_DELTA = 220898800
-
+        NTP_DELTA = 3155673600
         try:
             print("Syncing time via NTP...")
             NTP_QUERY = bytearray(48)
