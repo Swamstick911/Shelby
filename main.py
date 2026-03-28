@@ -1,72 +1,195 @@
-# code.py
+import machine
 import time
-import board
-import displayio
-import keypad
-import rtc
+from machine import Pin, SPI
+import st7735
+from src.font import FONT
+
+# Display init - constructor takes pin NUMBERS not Pin objects
+
+spi = SPI(0,
+    baudrate=8000000,
+    polarity=0,
+    phase=0,
+    sck=Pin(18),
+    mosi=Pin(19),
+    miso=Pin(16)
+)
+
+# TFT(spi, DC_pin_number, Reset_pin_number, CS_pin_number)
+display = st7735.TFT(spi, 22, 26, 20)
+display.initr()
+display.rgb(False)   # BGR mode for Sprig panel
+display.fill(st7735.TFT.BLACK)
+
+# Buttons — exact pins from Sprig HAL source
+
+BUTTON_W = Pin(5,  Pin.IN, Pin.PULL_UP)
+BUTTON_A = Pin(6,  Pin.IN, Pin.PULL_UP)
+BUTTON_S = Pin(7,  Pin.IN, Pin.PULL_UP)
+BUTTON_D = Pin(8,  Pin.IN, Pin.PULL_UP)
+BUTTON_I = Pin(12, Pin.IN, Pin.PULL_UP)
+BUTTON_J = Pin(13, Pin.IN, Pin.PULL_UP)
+BUTTON_K = Pin(14, Pin.IN, Pin.PULL_UP)
+BUTTON_L = Pin(15, Pin.IN, Pin.PULL_UP)
+
+# Simple debounce helper
+
+class Button:
+    def __init__(self, pin):
+        self.pin = pin
+        self._last = True
+        self._pressed = False
+
+    def update(self):
+        val = self.pin.value()
+        self._pressed = (self._last == True and val == False)
+        self._last = val
+
+    def pressed(self):
+        return self._pressed
+
+btns = {
+    "W": Button(BUTTON_W),
+    "A": Button(BUTTON_A),
+    "S": Button(BUTTON_S),
+    "D": Button(BUTTON_D),
+    "I": Button(BUTTON_I),
+    "J": Button(BUTTON_J),
+    "K": Button(BUTTON_K),
+    "L": Button(BUTTON_L),
+}
 
 # Load secrets
+
 try:
     from secrets import secrets
 except ImportError:
-    print("ERROR: secrets.py not found.")
-    while True: time.sleep(1)
+    display.fill(st7735.TFT.BLACK)
+    display.text((10, 50), "secrets.py", st7735.TFT.WHITE, FONT)
+    display.text((10, 62), "not found!", st7735.TFT.WHITE, FONT)
+    while True:
+        time.sleep(1)
 
-# Set time manually since WiFi isn't available on Sprig firmware
-# Update these numbers to your current time before saving!
-# Format: (year, month, day, hour, minute, second, weekday, yearday, isdst)
-# Hour is 24hr format — 21 = 9 PM
-r = rtc.RTC()
-r.datetime = time.struct_time((2026, 3, 26, 21, 44, 0, 0, 0, -1))
-print("Time set manually.")
+# WiFi + time sync
 
-display = board.DISPLAY
+wifi_connected = False
 
-BUTTONS = (
-    board.BUTTON_W, board.BUTTON_A, board.BUTTON_S, board.BUTTON_D,
-    board.BUTTON_I, board.BUTTON_J, board.BUTTON_K, board.BUTTON_L
-)
-keys = keypad.Keys(BUTTONS, value_when_pressed=False, pull=True)
+try:
+    from src.wifi_manager import WifiManager
+    wifi_mgr = WifiManager(secrets)
+    display.fill(st7735.TFT.BLACK)
+    display.text((10, 50), "Connecting to", st7735.TFT.WHITE, FONT)
+    display.text((10, 62), "WiFi...", st7735.TFT.WHITE, FONT)
+    wifi_connected = wifi_mgr.connect()
+    if wifi_connected:
+        display.fill(st7735.TFT.BLACK)
+        display.text((5, 57), "Syncing time...", st7735.TFT.WHITE, FONT)
+        wifi_mgr.sync_time()
+    else:
+        display.fill(st7735.TFT.BLACK)
+        display.text((10, 50), "WiFi failed.", st7735.TFT.RED, FONT)
+        display.text((10, 62), "Offline mode.", st7735.TFT.RED, FONT)
+        time.sleep(2)
+except Exception as e:
+    print(f"WiFi error: {e}")
+    wifi_connected = False
+
+# Clock screen
 
 from src.clock import ClockScreen
-clock_screen = ClockScreen(display.width, display.height)
-display.root_group = clock_screen
-clock_screen.update()
+clock = ClockScreen(display)
+clock.update()
 
-MENU_ITEMS = ["Clock", "GitHub", "Gmail", "Tasks"]
-menu_index = 0
+# Navigation state
+
+MENU_ITEMS   = ["Clock", "GitHub", "Gmail", "Tasks"]
+menu_index   = 0
 current_view = "Clock"
 
-clock_screen.show_menu_hint(menu_index)
-print("Shelby OS Started.")
+clock.show_menu_hint(menu_index)
+print("Shelby OS started.")
+
+last_api_fetch = time.ticks_ms()
+gh_count   = 0
+mail_count = 0
+
+# Main loop
 
 while True:
+    for b in btns.values():
+        b.update()
+
     if current_view == "Clock":
-        clock_screen.update()
+        clock.update()
 
-    event = keys.events.get()
-    if event and event.pressed:
-        key_pin = BUTTONS[event.key_number]
+    # Refresh API badge counts every 5 minutes
+    if wifi_connected and time.ticks_diff(time.ticks_ms(), last_api_fetch) > 300000:
+        try:
+            import urequests
+            headers = {
+                "Authorization": f"Bearer {secrets.get('github_token', '')}",
+                "User-Agent": "Sprig-Shelby"
+            }
+            r = urequests.get("https://api.github.com/notifications", headers=headers)
+            if r.status_code == 200:
+                gh_count = len(r.json())
+            r.close()
+        except Exception as e:
+            print(f"API refresh failed: {e}")
+        last_api_fetch = time.ticks_ms()
+        if current_view == "Clock":
+            clock.show_menu_hint(menu_index, gh_count, mail_count)
 
-        if key_pin == board.BUTTON_A:
-            if current_view != "Clock":
-                current_view = "Clock"
-                menu_index = 0
-                display.root_group = clock_screen
-                clock_screen.show_menu_hint(menu_index)
+    # Button handling
 
-        elif current_view == "Clock":
-            if key_pin == board.BUTTON_W:
-                menu_index = (menu_index - 1) % len(MENU_ITEMS)
-                clock_screen.show_menu_hint(menu_index)
+    if btns["A"].pressed():
+        if current_view != "Clock":
+            current_view = "Clock"
+            menu_index = 0
+            display.fill(st7735.TFT.BLACK)
+            clock._last_hour = -1
+            clock.update()
+            clock.show_menu_hint(menu_index, gh_count, mail_count)
 
-            elif key_pin == board.BUTTON_S:
-                menu_index = (menu_index + 1) % len(MENU_ITEMS)
-                clock_screen.show_menu_hint(menu_index)
+    elif current_view == "Clock":
+        if btns["W"].pressed():
+            menu_index = (menu_index - 1) % len(MENU_ITEMS)
+            clock.show_menu_hint(menu_index, gh_count, mail_count)
 
-            elif key_pin == board.BUTTON_D:
-                selected = MENU_ITEMS[menu_index]
-                print(f"Selected: {selected}")
-                current_view = selected
+        elif btns["S"].pressed():
+            menu_index = (menu_index + 1) % len(MENU_ITEMS)
+            clock.show_menu_hint(menu_index, gh_count, mail_count)
 
-    time.sleep(0.02)
+        elif btns["D"].pressed():
+            selected = MENU_ITEMS[menu_index]
+
+            if selected == "Clock":
+                pass
+
+            elif selected == "GitHub":
+                if not wifi_connected:
+                    clock.status_text = "No WiFi!"
+                    clock.show_menu_hint(menu_index)
+                else:
+                    current_view = "GitHub"
+                    display.fill(st7735.TFT.BLACK)
+                    display.text((55, 5),  "GitHub",     st7735.TFT.WHITE, FONT)
+                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT)
+
+            elif selected == "Gmail":
+                if not wifi_connected:
+                    clock.status_text = "No WiFi!"
+                    clock.show_menu_hint(menu_index)
+                else:
+                    current_view = "Gmail"
+                    display.fill(st7735.TFT.BLACK)
+                    display.text((58, 5),  "Gmail",      st7735.TFT.WHITE, FONT)
+                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT)
+
+            elif selected == "Tasks":
+                current_view = "Tasks"
+                display.fill(st7735.TFT.BLACK)
+                display.text((58, 5),  "Tasks",        st7735.TFT.WHITE, FONT)
+                display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT)
+
+    time.sleep_ms(20)
