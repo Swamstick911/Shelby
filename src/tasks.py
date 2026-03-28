@@ -87,4 +87,76 @@ class TasksScreen:
                 self._dirty = True
                 self.draw()
 
-                
+    #Persistence
+
+    def _load(self):
+        try:
+            with open(TASKS_FILE, "r") as f:
+                data = ujson.load(f)
+            if isinstance(data, list):
+                self.tasks = data
+            else:
+                self.tasks = []
+        except:
+            self.tasks = [
+                {"text": "Test the Shelby Firmware", "done": False},
+                {"text": "Log 5 hours in hackatime", "done": False},
+                #We can add more tasks with this format
+            ]
+    
+    def _save(self):
+        try:
+            with open(TASKS_FILE, "w") as f:
+                ujson.dump(self.tasks, f)
+        except Exception as e:
+            print("tasks save:", e)
+
+    #Draw screen functions
+
+    def _draw_header(self):
+        self._fill(0, 0, W, HEADER_H, _HEADER)
+        done = sum(1 for t in self.tasks if t["done"])
+        total = len(self.tasks)
+        title = "Tasks {}/{}".format(done, total)
+        self._text(title, _cx(title), 3, _BG)
+
+    def _draw_body(self):
+        y0 = HEADER_H
+        bh = H - HEADER_H - FOOTER_H
+        self._fill(0, y0, W, bh, _BG)
+
+        if not self.tasks:
+            msg = "No tasks. I=add demo"
+            self._text(msg, _cx(msg), y0 + bh // 2 - 4, _GRAY)
+            return
+        
+        y = y0 + 1
+        visible = self.tasks[self.scroll : self.scroll + MAX_ROWS]
+        for i, t in enumerate(visible):
+            real_i = i + self.scroll
+            is_sel = (real_i == self.cursor)
+            self._fill(0, y, W, ROW_H, _SEL_BG if is_sel else _BG)
+
+            check = "[x]" if t["done"] else "[ ]"
+            label = check + " " + t["text"][:(W // CHAR_W - 5)]
+            color = _DONE if t["done"] else (_GREEN if is_sel else _WHITE)
+            self._text(label, 2, y + 1, color)
+            y += ROW_H
+
+            #Scrollbar
+            if len(self.tasks) > MAX_ROWS:
+                sb_h = bh * MAX_ROWS // len(self.tasks)
+                sb_y = y0 + bh * self.scroll // len(self.tasks)
+                self._fill(W- 2, y0, 2, bh, _HEADER)
+                self._fill(W - 2, sb_y, 2, sb_h, _ACCENT)
+
+    def _draw_footeR(self):
+        self._fill(0, H - FOOTER_H, W, FOOTER_H, _HEADER)
+        hint = "W/S:nav K:done J:del"
+        self._text(hint, _cx(hint), H - FOOTER_H + 1, _BG)
+
+    def _text(self, s, x, y, color):
+        self.display.text((x, y), s, color, FONT, 1)
+
+    def _fill(self, x, y, w, h, color):
+        self.display.fillrect((x, y), (w, h), color)
