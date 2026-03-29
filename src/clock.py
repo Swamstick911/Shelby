@@ -6,7 +6,7 @@ class ClockScreen:
         self.display = display
         self.last_sec = -1
         self.last_min = -1
-        self.width = 180
+        self.width = 160
         self.height = 128
         self.status_text = "All caught up!"
 

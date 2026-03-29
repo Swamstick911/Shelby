@@ -66,8 +66,8 @@ try:
     from secrets import secrets
 except ImportError:
     display.fill(st7735.TFT.BLACK)
-    display.text((10, 50), "secrets.py", st7735.TFT.WHITE, FONT)
-    display.text((10, 62), "not found!", st7735.TFT.WHITE, FONT)
+    display.text((10, 50), "secrets.py", st7735.TFT.WHITE, FONT, 1)
+    display.text((10, 62), "not found!", st7735.TFT.WHITE, FONT, 1)
     while True:
         time.sleep(1)
 
@@ -79,17 +79,17 @@ try:
     from src.wifi_manager import WifiManager
     wifi_mgr = WifiManager(secrets)
     display.fill(st7735.TFT.BLACK)
-    display.text((10, 50), "Connecting to", st7735.TFT.WHITE, FONT)
-    display.text((10, 62), "WiFi...", st7735.TFT.WHITE, FONT)
+    display.text((10, 50), "Connecting to", st7735.TFT.WHITE, FONT, 1)
+    display.text((10, 62), "WiFi...", st7735.TFT.WHITE, FONT, 1)
     wifi_connected = wifi_mgr.connect()
     if wifi_connected:
         display.fill(st7735.TFT.BLACK)
-        display.text((5, 57), "Syncing time...", st7735.TFT.WHITE, FONT)
+        display.text((5, 57), "Syncing time...", st7735.TFT.WHITE, FONT, 1)
         wifi_mgr.sync_time()
     else:
         display.fill(st7735.TFT.BLACK)
-        display.text((10, 50), "WiFi failed.", st7735.TFT.RED, FONT)
-        display.text((10, 62), "Offline mode.", st7735.TFT.RED, FONT)
+        display.text((10, 50), "WiFi failed.", st7735.TFT.RED, FONT, 1)
+        display.text((10, 62), "Offline mode.", st7735.TFT.RED, FONT, 1)
         time.sleep(2)
 except Exception as e:
     print(f"WiFi error: {e}")
@@ -177,8 +177,8 @@ while True:
                 else:
                     current_view = "GitHub"
                     display.fill(st7735.TFT.BLACK)
-                    display.text((55, 5),  "GitHub",     st7735.TFT.WHITE, FONT)
-                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT)
+                    display.text((55, 5),  "GitHub",     st7735.TFT.WHITE, FONT, 1)
+                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
 
             elif selected == "Gmail":
                 if not wifi_connected:
@@ -187,13 +187,13 @@ while True:
                 else:
                     current_view = "Gmail"
                     display.fill(st7735.TFT.BLACK)
-                    display.text((58, 5),  "Gmail",      st7735.TFT.WHITE, FONT)
-                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT)
+                    display.text((58, 5),  "Gmail",      st7735.TFT.WHITE, FONT, 1)
+                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
 
             elif selected == "Tasks":
                 current_view = "Tasks"
                 display.fill(st7735.TFT.BLACK)
-                display.text((58, 5),  "Tasks",        st7735.TFT.WHITE, FONT)
-                display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT)
+                display.text((58, 5),  "Tasks",        st7735.TFT.WHITE, FONT, 1)
+                display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
 
     time.sleep_ms(20)

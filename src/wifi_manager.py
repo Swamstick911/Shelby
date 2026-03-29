@@ -29,31 +29,30 @@ class WifiManager:
         return False
     
     def sync_time(self):
-        #using NTP to sync with UTC and then adding timezone offset
-        NTP_HOST = "pool.ntp.org"
+        NTP_HOSTS = ["time.google.com", "pool.ntp.org", "time.cloudflare.com"]
         NTP_DELTA = 3155673600
-        try:
-            print("Syncing time via NTP...")
-            NTP_QUERY = bytearray(48)
-            NTP_QUERY[0] = 0x1B
-            addr = socket.getaddrinfo(NTP_HOST, 123)[0][-1]
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.settimeout(5)
-            s.sendto(NTP_QUERY, addr)
-            msg = s.recv(48)
-            s.close()
 
-            #get UTC time
-            utc = struct.unpack("!I", msg[40:44])[0] - NTP_DELTA
+        for host in NTP_HOSTS:
+            try:
+                print("Syncing time via NTP...", host)
+                NTP_QUERY = bytearray(48)
+                NTP_QUERY[0] = 0x1B
+                addr = socket.getaddrinfo(host, 123)[0][-1]
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.settimeout(5)
+                s.sendto(NTP_QUERY, addr)
+                msg = s.recv(48)
+                s.close()
 
-            #Apply the timezone offset
-            offset_seconds = int(float(self.secrets.get("timezone_offset", 5.5)) * 3600)
-            local_time = utc + offset_seconds
+                utc = struct.unpack("!I", msg[40:44])[0] - NTP_DELTA
+                offset_seconds = int(float(self.secrets.get("timezone_offset", 5.5)) * 3600)
+                local_time = utc + offset_seconds
 
-            #convert to tuple and set rtc
-            t = time.gmtime(local_time)
-            machine.RTC().datetime((t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
-            print(f"Time synced: {t[3]:02d}:{t[4]:02d}")
+                t = time.gmtime(local_time)
+                machine.RTC().datetime((t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
+                print(f"Time synced: {t[3]:02d}:{t[4]:02d}")
+                return True
+            except Exception as e:
+                print("NTP sync failed from", host, ":", e)
 
-        except Exception as e:
-            print(f"NTP sync failed: {e}")
+        return False
