@@ -9,6 +9,8 @@ class ClockScreen:
         self.width = 160
         self.height = 128
         self.status_text = "All caught up!"
+        self.prev_status_text = ""
+        self.prev_minute = -1
 
     def _color(self, r, g, b):
         return((b & 0xFB) << 8) | ((g & 0xFC) << 3) | (r >> 3)
@@ -58,13 +60,22 @@ class ClockScreen:
                     self._draw_pixel(cx + x, cy + y, yellow)
         
     def _draw_sky(self, hour, minute):
-        is_day = 6 <= hour < 18
+        print("DEBUG _draw_sky hour:", repr(hour), "minute:", repr(minute))
+        try:
+            h = int(hour)
+        except Exception:
+            h = 0
+
+        is_day = 6 <= h < 18
 
         #Setup background gradient colours
         if is_day:
-            if hour < 9: bg = self._color(100, 180, 255) #Morning
-            elif hour < 16: bg = self._color(40, 140, 255) #noon
-            else: bg = self._color(200, 100, 50) #Sunset
+            if h < 9: 
+                bg = self._color(100, 180, 255) #Morning
+            elif h < 16: 
+                bg = self._color(40, 140, 255) #noon
+            else: 
+                bg = self._color(200, 100, 50) #Sunset
         else:
             bg = self._color(0, 0, 40) #night
 
@@ -72,9 +83,9 @@ class ClockScreen:
 
         #Physics: calculate the position across the 12 hour arc
         if is_day:
-            mins_since_rise = (hour - 6) * 60 + minute
+            mins_since_rise = (h - 6) * 60 + minute
         else:
-            mins_since_rise = ((hour + 6) % 24) * 60 + minute
+            mins_since_rise = ((h + 6) % 24) * 60 + minute
 
         progress = mins_since_rise / 720.0
         cx = int(progress * 160)
@@ -100,71 +111,72 @@ class ClockScreen:
     #Main loop
     def update(self):
         now = time.localtime()
-        if now[5] == self.last_sec:
+        sec = now[5]
+
+        # Only run once per second
+        if sec == self.last_sec:
             return
-        self.last_sec = now[5]
-        
+        self.last_sec = sec
+
         hour = now[3]
         minute = now[4]
-        
-        # Redraw entire sky when the MINUTE changes to animate Sun/Moon movement
+
+        # Redraw sky only when minute changes
         if minute != self.last_min:
             self.last_min = minute
             self._draw_sky(hour, minute)
-            
+
         is_day = 6 <= hour < 18
         text_bg = self._color(40, 140, 255) if is_day else self._color(0, 0, 40)
-        if is_day and hour >= 16: text_bg = self._color(200, 100, 50)
-        
+        if is_day and hour >= 16:
+            text_bg = self._color(200, 100, 50)
+
         time_col = self._color(255, 255, 255)
         date_col = self._color(220, 255, 220) if is_day else self._color(180, 200, 255)
         stat_col = self._color(255, 255, 100)
-        
-        # Clear only the text boundaries to avoid flickering
-        self._fill_rect(0, 45, self.width, 30, text_bg)
-        self._fill_rect(0, 80, self.width, 18, text_bg)
-        self._fill_rect(0, 115, self.width, 13, text_bg)
-        
-        # HUGE TIME (Scale 3 - 16px wide per char)
-        hr_12 = hour % 12 or 12
-        time_str = f"{hr_12}:{minute:02d}"
-        time_w = len(time_str) * 16
-        time_x = (self.width - time_w) // 2 - 8 # offset slightly left for AM/PM
-        self._draw_text(time_str, time_x, 48, time_col, scale=3)
-        
-        # Small AM/PM indicator (Scale 1)
-        ampm = "AM" if hour < 12 else "PM"
-        self._draw_text(ampm, time_x + time_w + 2, 65, time_col, scale=1)
-        
-        # MEDIUM DATE (Scale 2 - 11px wide per char)
-        months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        date_str = f"{months[now[1]-1]} {now[2]}"
-        date_w = len(date_str) * 11
-        date_x = (self.width - date_w) // 2
-        self._draw_text(date_str, date_x, 82, date_col, scale=2)
-        
-        # Status Bar
-        stat_w = len(self.status_text) * 6
-        stat_x = (self.width - stat_w) // 2
-        self._draw_text(self.status_text, stat_x, 118, stat_col, scale=1)
+
+        # Only redraw time/date when minute changes
+        if minute != self.prev_minute:
+            self.prev_minute = minute
+
+            # Clear time/date area
+            self._fill_rect(0, 45, self.width, 30, text_bg)
+            self._fill_rect(0, 80, self.width, 18, text_bg)
+
+            # Time
+            hr_12 = hour % 12 or 12
+            time_str = f"{hr_12}:{minute:02d}"
+            time_w = len(time_str) * 16
+            time_x = (self.width - time_w) // 2 - 8
+            self._draw_text(time_str, time_x, 48, time_col, scale=3)
+
+            ampm = "AM" if hour < 12 else "PM"
+            self._draw_text(ampm, time_x + time_w + 2, 65, time_col, scale=1)
+
+            # Date
+            months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            date_str = f"{months[now[1]-1]} {now[2]}"
+            date_w = len(date_str) * 11
+            date_x = (self.width - date_w) // 2
+            self._draw_text(date_str, date_x, 82, date_col, scale=2)
+
+        # Status bar: only redraw if text changed
+        if self.status_text != self.prev_status_text:
+            self.prev_status_text = self.status_text
+            self._fill_rect(0, 115, self.width, 13, text_bg)
+            stat_w = len(self.status_text) * 6
+            stat_x = (self.width - stat_w) // 2
+            self._draw_text(self.status_text, stat_x, 118, stat_col, scale=1)
 
     def show_menu_hint(self, index, gh_count=0, mail_count=0):
         menus = ["Clock", "GitHub", "Gmail", "Tasks"]
-        
+
         if index == 0:
             badges = []
-            if gh_count > 0: badges.append(f"GH:{gh_count}")
-            if mail_count > 0: badges.append(f"Mail:{mail_count}")
+            if gh_count > 0:
+                badges.append(f"GH:{gh_count}")
+            if mail_count > 0:
+                badges.append(f"Mail:{mail_count}")
             self.status_text = " | ".join(badges) if badges else "All caught up!"
         else:
             self.status_text = f"-> {menus[index]} (D)"
-            
-        hour = time.localtime()[3]
-        is_day = 6 <= hour < 18
-        text_bg = self._color(40, 140, 255) if is_day else self._color(0, 0, 40)
-        if is_day and hour >= 16: text_bg = self._color(200, 100, 50)
-        
-        self._fill_rect(0, 115, self.width, 13, text_bg)
-        stat_w = len(self.status_text) * 6
-        stat_x = (self.width - stat_w) // 2
-        self._draw_text(self.status_text, stat_x, 118, self._color(255, 255, 100), scale=1)

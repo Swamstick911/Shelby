@@ -151,6 +151,9 @@ while True:
             current_view = "Clock"
             menu_index = 0
             display.fill(st7735.TFT.BLACK)
+            clock.last_min = -1 #force sky redraw
+            clock.last_sec = -1 #force text redraw
+            clock.prev_status_text = "" #force status redraw
             clock._last_hour = -1
             clock.update()
             clock.show_menu_hint(menu_index, gh_count, mail_count)
