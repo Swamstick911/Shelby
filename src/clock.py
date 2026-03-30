@@ -63,11 +63,10 @@ class ClockScreen:
         is_day = 6 <= h < 18
         bg = self._sky_bg(hour)
 
-        # Step 1: fill ENTIRE screen with sky color
-        # This means text will always sit on the correct background - no patches possible
+        # fill ENTIRE screen with sky color
         self._fill_rect(0, 0, self.width, self.height, bg)
 
-        # Step 2: draw sky elements (sun/moon/clouds/stars)
+        # draw sky elements (sun/moon/clouds/stars)
         mins = (h - 6) * 60 + minute if is_day else ((h + 6) % 24) * 60 + minute
         progress = mins / 720.0
         cx = int(progress * 160)
@@ -85,7 +84,7 @@ class ClockScreen:
             for sx, sy in [(20,15),(40,30),(80,10),(130,25),(150,5),(90,35)]:
                 self._draw_pixel(sx, sy, white)
 
-        # Step 3: draw ALL text on top (background is already the sky color)
+        # draw ALL text on top (background is already the sky color)
         time_col = self._color(255, 255, 255)
         date_col = self._color(220, 255, 220) if is_day else self._color(180, 200, 255)
 
@@ -96,7 +95,7 @@ class ClockScreen:
         self._draw_text(time_str, time_x, 48, time_col, scale=3)
 
         ampm = "AM" if hour < 12 else "PM"
-        self._draw_text(ampm, time_x + time_w + 2, 65, time_col, scale=1)
+        self._draw_text_on_bg(ampm, time_x + time_w + 2, 60, time_col, bg)
 
         months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
         date_str = f"{months[now[1]-1]} {now[2]}"
@@ -104,8 +103,12 @@ class ClockScreen:
         date_x = (self.width - date_w) // 2
         self._draw_text(date_str, date_x, 82, date_col, scale=2)
 
-        # Step 4: draw status bar
-        self._draw_status(hour)
+        # draw status bar
+        stat_col = self._color(255, 255, 100)
+        stat_w = len(self.status_text) * 6
+        stat_x = (self.width - stat_w) // 2
+        self._draw_text_on_bg(self.status_text, stat_x, 112, stat_col, bg)
+        self.prev_status_text = self.status_text
 
     def _draw_status(self, hour):
         # Clear just status row with exact sky color, then draw text
@@ -133,10 +136,6 @@ class ClockScreen:
             self._repaint_all(hour, minute, now)
             self.needs_full_redraw = False
 
-        # Status bar update between minute changes
-        elif self.status_text != self.prev_status_text:
-            self._draw_status(hour)
-
     def show_menu_hint(self, index, gh_count=0, mail_count=0):
         menus = ["Clock", "GitHub", "Gmail", "Tasks"]
         if index == 0:
@@ -146,3 +145,30 @@ class ClockScreen:
             self.status_text = " | ".join(badges) if badges else "All caught up!"
         else:
             self.status_text = f"-> {menus[index]} (D)"
+
+        self.needs_full_redraw = True
+        self.last_sec = -1
+
+    def _draw_char_on_bg(self, ch, x, y, fg, bg):
+        #draw a single character with explicit background color at scale=1
+        ci = ord(ch)
+        if not (FONT["Start"] <= ci <= FONT["End"]):
+            return
+        fontw = FONT["Width"]
+        fonth = FONT["Height"]
+        ci = (ci - FONT["Start"]) * fontw
+        charA = FONT["Data"][ci:ci + fontw]
+
+        for col in range(fontw):
+            c = charA[col]
+            for row in range(fonth):
+                color = fg if (c & 0x01) else bg
+                self._draw_pixel(x + col, y + row, color)
+                c >>= 1
+
+    def _draw_text_on_bg(self, text, x, y, fg, bg):
+        """Draw text with explicit background color at scale=1"""
+        px = x
+        for ch in text:
+            self._draw_char_on_bg(ch, px, y, fg, bg)
+            px += FONT["Width"] + 1
