@@ -79,6 +79,9 @@ clock = ClockScreen(display)
 clock.show_menu_hint(0)   # set status text BEFORE first draw
 clock.update()            # now draws everything including status correctly
 
+# 6. Navigation
+current_view = "Clock"
+
 from src.menu import MenuScreen
 menu_screen = MenuScreen(display, FONT)
 
@@ -87,7 +90,7 @@ last_api_fetch = time.ticks_ms()
 gh_count   = 0
 mail_count = 0
 
-# 6. Main loop
+# 7. Main loop
 while True:
     for b in btns.values():
         b.update()

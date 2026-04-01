@@ -1,19 +1,23 @@
 import st7735
 from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings
 
+def _c(r, g, b):
+    """Convert RGB tuple to 16-bit 565 color integer"""
+    return((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+
 #colour palette
 BG = st7735.TFT.BLACK
 TITLE_C = st7735.TFT.WHITE
-HINT_C = (80, 80, 80)
+HINT_C = _c(80, 80, 80)
 
 #Card colours
-CARD_BG = (20, 20, 40)
-CARD_SEL = (40, 80, 120)
+CARD_BG = _c(20, 20, 40)
+CARD_SEL = _c(40, 80, 120)
 ICON_C = st7735.TFT.WHITE
 ICON_SEL_C = st7735.TFT.CYAN
-LABEL_C = (180, 180, 180)
+LABEL_C = _c(180, 180, 180)
 LABEL_SEL_C = st7735.TFT.WHITE
-BORDER_C = (60, 60, 100)
+BORDER_C = _c(60, 60, 100)
 BORDER_SEL_C = st7735.TFT.CYAN
 
 # Layout constants
@@ -53,7 +57,7 @@ class MenuScreen:
         self._prev_cursor = -1
         self.draw()
 
-    def draW(self):
+    def draw(self):
         """Smart draw, full repaint on the first show card only on cusror move"""
         if not self._drawn:
             self._full_draw()
@@ -95,61 +99,63 @@ class MenuScreen:
         d = self.display
         d.fill(BG)
 
-        #Title bar
-        d.fill_rect(0, 0, 160, TITLE_H, (10, 10, 30))
-        #Centre "SHELBY OS" in the title bar
+        # Title bar
+        d.fillrect((0, 0), (160, TITLE_H), _c(10, 10, 30))
         title = "SHELBY OS"
         tx = (160 - len(title) * 6) // 2
         d.text((tx, 3), title, TITLE_C, self.font, 1)
 
-        #footer hint
+        # Footer hint
         fy = 128 - FOOTER_H
-        d.fill_rect(0, fy, 160, FOOTER_H, (10, 10, 30))
-        hint = "W/S: nav D: open A: back"
+        d.fillrect((0, fy), (160, FOOTER_H), _c(10, 10, 30))
+        hint = "W/S:nav D:open A:back"
         hx = (160 - len(hint) * 6) // 2
         d.text((hx, fy + 2), hint, HINT_C, self.font, 1)
 
-        #Draw all 4 cards
+        # Draw all 4 cards
         for i in range(len(APPS)):
             self._draw_card(i)
-    
+
     def _card_rect(self, index):
-        """Returns (x, y, w, h) for the card at the flat index."""
+        """Returns (x, y, w, h) for the card"""
         row = index // 2
         col = index % 2
         x = COL0_X if col == 0 else COL1_X
         y = ROW0_Y if row == 0 else ROW1_Y
         return x, y, CARD_W, CARD_H
-    
+
     def _draw_card(self, index):
-        d = self.display
+        d   = self.display
         app = APPS[index]
         sel = (index == self.cursor)
 
         x, y, w, h = self._card_rect(index)
 
-        #Card background
+        # Card background
         bg_col = CARD_SEL if sel else CARD_BG
-        d.fill_rect(x, y, w, h, bg_col)
+        d.fillrect((x, y), (w, h), bg_col)
 
-        #Border 1 px rect
+        # Border — drawn as 4 lines (driver has no rect outline method)
         bc = BORDER_SEL_C if sel else BORDER_C
-        d.rect(x, y, w, h, bc)
+        d.line((x,     y),     (x+w-1, y),     bc)  # top
+        d.line((x,     y+h-1), (x+w-1, y+h-1), bc)  # bottom
+        d.line((x,     y),     (x,     y+h-1), bc)  # left
+        d.line((x+w-1, y),     (x+w-1, y+h-1), bc)  # right
 
-        #Arrow indicator top left corner when selected
+        # Arrow indicator when selected
         if sel:
-            d.text((x + 2, y + 2),  ">", ICON_SEL_C, self.font, 1)
+            d.text((x + 2, y + 2), ">", ICON_SEL_C, self.font, 1)
 
-        #Icon (centered in the card)
+        # Icon — centred in the upper portion of the card
         icon_x = x + (w - 24) // 2
         icon_y = y + 6
         ic = ICON_SEL_C if sel else ICON_C
         app["draw"](d, icon_x, icon_y, ic)
 
-        #Label (centered below the icon)
+        # Label — centred at the bottom of the card
         label = app["label"]
-        lw = len(label) * 6
-        lx = x + (w - lw) // 2
-        ly = y + h - 12
-        lc = LABEL_SEL_C if sel else LABEL_C
+        lw    = len(label) * 6
+        lx    = x + (w - lw) // 2
+        ly    = y + h - 12
+        lc    = LABEL_SEL_C if sel else LABEL_C
         d.text((lx, ly), label, lc, self.font, 1)
