@@ -79,17 +79,15 @@ clock = ClockScreen(display)
 clock.show_menu_hint(0)   # set status text BEFORE first draw
 clock.update()            # now draws everything including status correctly
 
-# 6. Navigation state
-MENU_ITEMS   = ["Clock", "GitHub", "Gmail", "Tasks"]
-menu_index   = 0
-current_view = "Clock"
-print("Shelby OS started.")
+from src.menu import MenuScreen
+menu_screen = MenuScreen(display, FONT)
+
 
 last_api_fetch = time.ticks_ms()
 gh_count   = 0
 mail_count = 0
 
-# 7. Main loop
+# 6. Main loop
 while True:
     for b in btns.values():
         b.update()
@@ -122,40 +120,47 @@ while True:
             menu_index = 0
             clock.last_sec = -1
             clock.needs_full_redraw = True
-            clock.show_menu_hint(menu_index, gh_count, mail_count)
+            clock.show_menu_hint(0, gh_count, mail_count)
             clock.update()
 
     elif current_view == "Clock":
-        if btns["W"].pressed():
-            menu_index = (menu_index - 1) % len(MENU_ITEMS)
-            clock.show_menu_hint(menu_index, gh_count, mail_count)
+        if btns["D"].pressed():
+            current_view = "Menu"
+            menu_screen.show()
 
-        elif btns["S"].pressed():
-            menu_index = (menu_index + 1) % len(MENU_ITEMS)
-            clock.show_menu_hint(menu_index, gh_count, mail_count)
-
-        elif btns["D"].pressed():
-            selected = MENU_ITEMS[menu_index]
-            if selected == "GitHub":
-                if not wifi_connected:
-                    clock.status_text = "No WiFi!"
-                else:
-                    current_view = "GitHub"
-                    display.fill(st7735.TFT.BLACK)
-                    display.text((55, 5),  "GitHub",     st7735.TFT.WHITE, FONT, 1)
-                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
-            elif selected == "Gmail":
-                if not wifi_connected:
-                    clock.status_text = "No WiFi!"
-                else:
-                    current_view = "Gmail"
-                    display.fill(st7735.TFT.BLACK)
-                    display.text((58, 5),  "Gmail",      st7735.TFT.WHITE, FONT, 1)
-                    display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
-            elif selected == "Tasks":
-                current_view = "Tasks"
+    elif current_view == "Menu":
+        result = menu_screen.handle_input(btns)
+        if result == "clock":
+            current_view = "Clock"
+            clock.last_sec = -1
+            clock.needs_full_redraw = True
+            clock.show_menu_hint(0, gh_count, mail_count)
+            clock.update()
+        elif result == "github":
+            if not wifi_connected:
+                current_view = "Menu"   # stay, can't go online
+            else:
+                current_view = "GitHub"
                 display.fill(st7735.TFT.BLACK)
-                display.text((58, 5),  "Tasks",        st7735.TFT.WHITE, FONT, 1)
-                display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
+                display.text((55, 5),  "GitHub",     st7735.TFT.WHITE, FONT, 1)
+                display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
+        elif result == "gmail":
+            if not wifi_connected:
+                current_view = "Menu"
+            else:
+                current_view = "Gmail"
+                display.fill(st7735.TFT.BLACK)
+                display.text((58, 5),  "Gmail",      st7735.TFT.WHITE, FONT, 1)
+                display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
+        elif result == "tasks":
+            current_view = "Tasks"
+            display.fill(st7735.TFT.BLACK)
+            display.text((58, 5),  "Tasks",        st7735.TFT.WHITE, FONT, 1)
+            display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
+        elif result == "settings":
+            current_view = "Settings"
+            display.fill(st7735.TFT.BLACK)
+            display.text((45, 5),  "Settings",    st7735.TFT.WHITE, FONT, 1)
+            display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
 
     time.sleep_ms(20)
