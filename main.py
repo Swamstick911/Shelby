@@ -4,6 +4,7 @@ from machine import Pin, SPI
 import st7735
 from src.font import FONT
 
+
 # 1. Display init FIRST
 spi = SPI(0, baudrate=8000000, polarity=0, phase=0,
     sck=Pin(18), mosi=Pin(19), miso=Pin(16))
@@ -12,6 +13,7 @@ display.initg()
 display.rgb(False)
 display.rotation(1)
 display.fill(st7735.TFT.BLACK)
+
 
 # 2. Buttons
 BUTTON_W = Pin(5,  Pin.IN, Pin.PULL_UP)
@@ -22,6 +24,7 @@ BUTTON_I = Pin(12, Pin.IN, Pin.PULL_UP)
 BUTTON_J = Pin(13, Pin.IN, Pin.PULL_UP)
 BUTTON_K = Pin(14, Pin.IN, Pin.PULL_UP)
 BUTTON_L = Pin(15, Pin.IN, Pin.PULL_UP)
+
 
 class Button:
     def __init__(self, pin):
@@ -35,12 +38,14 @@ class Button:
     def pressed(self):
         return self._pressed
 
+
 btns = {
     "W": Button(BUTTON_W), "A": Button(BUTTON_A),
     "S": Button(BUTTON_S), "D": Button(BUTTON_D),
     "I": Button(BUTTON_I), "J": Button(BUTTON_J),
     "K": Button(BUTTON_K), "L": Button(BUTTON_L),
 }
+
 
 # 3. Secrets
 try:
@@ -50,6 +55,7 @@ except ImportError:
     display.text((10, 50), "secrets.py", st7735.TFT.WHITE, FONT, 1)
     display.text((10, 62), "not found!", st7735.TFT.WHITE, FONT, 1)
     while True: time.sleep(1)
+
 
 # 4. WiFi + NTP
 wifi_connected = False
@@ -73,22 +79,26 @@ except Exception as e:
     print(f"WiFi error: {e}")
     wifi_connected = False
 
-# 5. Clock — ONLY HERE, after display exists
+
+# 5. Screens
 from src.clock import ClockScreen
-clock = ClockScreen(display)
-clock.show_menu_hint(0)   # set status text BEFORE first draw
-clock.update()            # now draws everything including status correctly
-
-# 6. Navigation
-current_view = "Clock"
-
 from src.menu import MenuScreen
+
+clock       = ClockScreen(display)
 menu_screen = MenuScreen(display, FONT)
 
+clock.show_menu_hint(0)
+clock.update()
 
+
+# 6. Navigation state
+current_view   = "Clock"
 last_api_fetch = time.ticks_ms()
-gh_count   = 0
-mail_count = 0
+gh_count       = 0
+mail_count     = 0
+
+print("Shelby OS started.")
+
 
 # 7. Main loop
 while True:
@@ -98,6 +108,7 @@ while True:
     if current_view == "Clock":
         clock.update()
 
+    # Background GitHub fetch every 5 min
     if wifi_connected and time.ticks_diff(time.ticks_ms(), last_api_fetch) > 300000:
         try:
             import urequests, gc
@@ -115,17 +126,23 @@ while True:
             print(f"API refresh failed: {e}")
         last_api_fetch = time.ticks_ms()
         if current_view == "Clock":
-            clock.show_menu_hint(menu_index, gh_count, mail_count)
+            clock.show_menu_hint(0, gh_count, mail_count)
 
+    #A button: layered back navigation
     if btns["A"].pressed():
-        if current_view != "Clock":
-            current_view = "Clock"
-            menu_index = 0
+        if current_view == "Clock":
+            pass                          # nothing to go back to
+        elif current_view == "Menu":
+            current_view = "Clock"        # Menu → Clock
             clock.last_sec = -1
             clock.needs_full_redraw = True
             clock.show_menu_hint(0, gh_count, mail_count)
             clock.update()
+        else:
+            current_view = "Menu"         # any app → Menu
+            menu_screen.show()
 
+    #Per-screen input
     elif current_view == "Clock":
         if btns["D"].pressed():
             current_view = "Menu"
@@ -133,15 +150,9 @@ while True:
 
     elif current_view == "Menu":
         result = menu_screen.handle_input(btns)
-        if result == "clock":
-            current_view = "Clock"
-            clock.last_sec = -1
-            clock.needs_full_redraw = True
-            clock.show_menu_hint(0, gh_count, mail_count)
-            clock.update()
-        elif result == "github":
+        if result == "github":
             if not wifi_connected:
-                current_view = "Menu"   # stay, can't go online
+                current_view = "Menu"
             else:
                 current_view = "GitHub"
                 display.fill(st7735.TFT.BLACK)
@@ -163,7 +174,7 @@ while True:
         elif result == "settings":
             current_view = "Settings"
             display.fill(st7735.TFT.BLACK)
-            display.text((45, 5),  "Settings",    st7735.TFT.WHITE, FONT, 1)
+            display.text((45, 5),  "Settings",     st7735.TFT.WHITE, FONT, 1)
             display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
 
     time.sleep_ms(20)
