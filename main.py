@@ -59,6 +59,7 @@ except ImportError:
 
 # 4. WiFi + NTP
 wifi_connected = False
+wifi_mgr       = None
 try:
     from src.wifi_manager import WifiManager
     wifi_mgr = WifiManager(secrets)
@@ -80,12 +81,20 @@ except Exception as e:
     wifi_connected = False
 
 
-# 5. Screens
-from src.clock import ClockScreen
-from src.menu import MenuScreen
+# 5. All screens
+from src.clock    import ClockScreen
+from src.menu     import MenuScreen
+from src.github   import GithubScreen
+from src.gmail    import GmailScreen
+from src.tasks    import TaskScreen
+from src.settings import SettingsScreen
 
-clock       = ClockScreen(display)
-menu_screen = MenuScreen(display, FONT)
+clock    = ClockScreen(display)
+menu_scr = MenuScreen(display, FONT)
+gh_scr   = GithubScreen(display, FONT, secrets)
+gm_scr   = GmailScreen(display, FONT, secrets)
+tk_scr   = TaskScreen(display, FONT)
+st_scr   = SettingsScreen(display, FONT, secrets, wifi_mgr)
 
 clock.show_menu_hint(0)
 clock.update()
@@ -117,7 +126,10 @@ while True:
                 "Authorization": f"Bearer {secrets.get('github_token', '')}",
                 "User-Agent": "Sprig-Shelby"
             }
-            r = urequests.get("https://api.github.com/notifications?per_page=5", headers=headers)
+            r = urequests.get(
+                "https://api.github.com/notifications?per_page=5",
+                headers=headers
+            )
             if r.status_code == 200:
                 gh_count = len(r.json())
             r.close()
@@ -128,53 +140,76 @@ while True:
         if current_view == "Clock":
             clock.show_menu_hint(0, gh_count, mail_count)
 
-    #A button: layered back navigation
+    # ── A button: layered back navigation ────────────────────────
     if btns["A"].pressed():
         if current_view == "Clock":
-            pass                          # nothing to go back to
+            pass
         elif current_view == "Menu":
-            current_view = "Clock"        # Menu → Clock
+            current_view = "Clock"
             clock.last_sec = -1
             clock.needs_full_redraw = True
             clock.show_menu_hint(0, gh_count, mail_count)
             clock.update()
         else:
-            current_view = "Menu"         # any app → Menu
-            menu_screen.show()
+            current_view = "Menu"
+            menu_scr.show()
 
     #Per-screen input
     elif current_view == "Clock":
         if btns["D"].pressed():
             current_view = "Menu"
-            menu_screen.show()
+            menu_scr.show()
 
     elif current_view == "Menu":
-        result = menu_screen.handle_input(btns)
+        result = menu_scr.handle_input(btns)
         if result == "github":
             if not wifi_connected:
                 current_view = "Menu"
             else:
                 current_view = "GitHub"
-                display.fill(st7735.TFT.BLACK)
-                display.text((55, 5),  "GitHub",     st7735.TFT.WHITE, FONT, 1)
-                display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
+                gh_scr.show()
+
         elif result == "gmail":
             if not wifi_connected:
                 current_view = "Menu"
             else:
                 current_view = "Gmail"
-                display.fill(st7735.TFT.BLACK)
-                display.text((58, 5),  "Gmail",      st7735.TFT.WHITE, FONT, 1)
-                display.text((35, 60), "Loading...", st7735.TFT.GREEN, FONT, 1)
+                gm_scr.show()
+
         elif result == "tasks":
             current_view = "Tasks"
-            display.fill(st7735.TFT.BLACK)
-            display.text((58, 5),  "Tasks",        st7735.TFT.WHITE, FONT, 1)
-            display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
+            tk_scr.show()
+
         elif result == "settings":
             current_view = "Settings"
-            display.fill(st7735.TFT.BLACK)
-            display.text((45, 5),  "Settings",     st7735.TFT.WHITE, FONT, 1)
-            display.text((25, 60), "Coming soon!", st7735.TFT.GREEN, FONT, 1)
+            st_scr.show()
+
+    #Active screen input handling
+    elif current_view == "GitHub":
+        result = gh_scr.handle_input(btns)
+        if result == "menu":
+            current_view = "Menu"
+            menu_scr.show()
+
+    elif current_view == "Gmail":
+        result = gm_scr.handle_input(btns)
+        if result == "menu":
+            current_view = "Menu"
+            menu_scr.show()
+
+    elif current_view == "Tasks":
+        result = tk_scr.handle_input(btns)
+        if result == "menu":
+            current_view = "Menu"
+            menu_scr.show()
+
+    elif current_view == "Settings":
+        result = st_scr.handle_input(btns)
+        if result == "menu":
+            clock.use_24h = st_scr.use_24h
+            clock.needs_full_redraw = True
+            clock.last_sec = -1
+            current_view = "Menu"
+            menu_scr.show()
 
     time.sleep_ms(20)

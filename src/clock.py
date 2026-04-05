@@ -12,6 +12,7 @@ class ClockScreen:
         self.status_text = "All caught up!"
         self.prev_status_text = ""
         self.needs_full_redraw = True
+        self.use_24h = False
 
     def _color(self, r, g, b):
         return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3)
@@ -88,14 +89,19 @@ class ClockScreen:
         time_col = self._color(255, 255, 255)
         date_col = self._color(220, 255, 220) if is_day else self._color(180, 200, 255)
 
-        hr_12 = hour % 12 or 12
-        time_str = f"{hr_12}:{minute:02d}"
-        time_w = len(time_str) * 16
-        time_x = (self.width - time_w) // 2 - 8
-        self._draw_text(time_str, time_x, 48, time_col, scale=3)
-
-        ampm = "AM" if hour < 12 else "PM"
-        self._draw_text_on_bg(ampm, time_x + time_w + 2, 60, time_col, bg)
+        if self.use_24h:
+            time_str = f"{hour:02d}:{minute:02d}"
+            time_w = len(time_str) * 16
+            time_x = (self.width - time_w) // 2
+            self._draw_text(time_str, time_x, 48, time_col, scale=3)
+        else:
+            hr_12 = hour % 12 or 12
+            time_str = f"{hr_12}:{minute:02d}"
+            time_w = len(time_str) * 16
+            time_x = (self.width - time_w) // 2 - 8
+            self._draw_text(time_str, time_x, 48, time_col, scale=3)
+            ampm = "AM" if hour < 12 else "PM"
+            self._draw_text_on_bg(ampm, time_x + time_w + 2, 60, time_col, bg)
 
         months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
         date_str = f"{months[now[1]-1]} {now[2]}"

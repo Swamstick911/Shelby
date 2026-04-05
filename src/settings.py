@@ -12,7 +12,7 @@ GREEN = st7735.TFT.GREEN
 RED = st7735.TFT.RED
 CYAN = st7735.TFT.CYAN
 YELLOW = _c(255, 220, 0)
-GREY = (120, 120, 120)
+GREY = _c(120, 120, 120)
 TITLE_BG = _c(10, 10, 30)
 SEL_BG = _c(20, 40, 60)
 
@@ -27,7 +27,7 @@ ITEMS = [
 INTERACTIVE = {0, 1}
 
 class SettingsScreen:
-    def __init__(self, display, font):
+    def __init__(self, display, font, secrets, wifi_mgr=None):
         self.display = display
         self.font = font
         self.secrets = secrets
@@ -40,7 +40,7 @@ class SettingsScreen:
     def show(self):
         self.cursor = 0
         self._status = ""
-        self.draw()
+        self._draw()
 
     def _get_ip(self):
         try:
@@ -73,7 +73,7 @@ class SettingsScreen:
         if index == 3:
             return self._get_board()
         if index == 4:
-            return self.get_ip()
+            return self._get_ip()
         if index == 5:
             return self._get_ram()
         return ""
@@ -102,7 +102,7 @@ class SettingsScreen:
             sel = (i == self.cursor)
             is_header = (i == 2)
 
-            if sel and not is_header:
+            if is_header:
                 lx = (160 - len(label) * 6) // 2
                 d.text((lx, y), label, GREY, self.font, 1)
                 y += 15
@@ -207,7 +207,7 @@ class SettingsScreen:
                     except Exception as e:
                         self._status = "Sync failed"
                         self._status_color = RED
-                    self.draw()
+                    self._draw()
                 else:
                     self._status = "No WiFi mgr"
                     self._status_color = RED
