@@ -89,9 +89,6 @@ class ClockScreen:
         time_col = self._color(255, 255, 255)
         date_col = self._color(220, 255, 220) if is_day else self._color(180, 200, 255)
 
-        print("use_24h =", self.use_24h)
-        print("hour =", hour)
-
         if self.use_24h:
             time_str = f"{hour:02d}:{minute:02d}"
             time_w = len(time_str) * 16

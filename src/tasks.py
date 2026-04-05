@@ -54,7 +54,7 @@ class TaskScreen:
 
         #Footer
         d.fillrect((0, 116), (160, 12), TITLE_BG)
-        d.text((4, 118), "W/S:nav D:done L:del", GREY, self.font, 1)
+        d.text((4, 118), "D:done L:del I:sync", GREY, self.font, 1)
 
         if not self.tasks:
             d.text((20, 55), "No tasks!", GREY, self.font, 1)
@@ -71,7 +71,7 @@ class TaskScreen:
 
             #Cursor highlight
             if sel:
-                d.fillrect((0, y - 1,), (160, 13), _c(20, 40 , 60))
+                d.fillrect((0, y - 1), (160, 13), _c(20, 40 , 60))
 
             #Checkbox
             if task["done"]:
@@ -85,7 +85,7 @@ class TaskScreen:
             if len(text) > 18:
                 text = text[:17] + "~"
             color = GREY if task["done"] else (WHITE if not sel else CYAN)
-            d.text((28, y), text.color, self.font, 1)
+            d.text((28, y), text, color, self.font, 1)
 
             y += 14
     
@@ -94,6 +94,9 @@ class TaskScreen:
             return "menu"
         
         if not self.tasks:
+            if btns["I"].pressed():
+                self._load()
+                self._draw()
             return None
         
         if btns["W"].pressed():
@@ -116,6 +119,11 @@ class TaskScreen:
             if self.cursor >= len(self.tasks) and self.cursor > 0:
                 self.cursor -= 1
             self._save()
+            self._draw()
+        
+        elif btns["I"].pressed():
+            self._load()
+            self.cursor = 0
             self._draw()
 
         return None

@@ -1,36 +1,38 @@
+# src/github.py
 import st7735
 import urequests
 import gc
 from src.utils import draw_text_on_bg
 
+
 def _c(r, g, b):
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
 
-BG = st7735.TFT.BLACK
-WHITE = st7735.TFT.WHITE
-GREEN = st7735.TFT.GREEN
-RED = st7735.TFT.RED
-CYAN = st7735.TFT.CYAN
-GREY = _c(120, 120, 120)
+
+BG       = st7735.TFT.BLACK
+WHITE    = st7735.TFT.WHITE
+GREEN    = st7735.TFT.GREEN
+RED      = st7735.TFT.RED
+CYAN     = st7735.TFT.CYAN
+GREY     = _c(120, 120, 120)
 TITLE_BG = _c(10, 10, 30)
+
 
 class GithubScreen:
     def __init__(self, display, font, secrets):
         self.display = display
-        self.font = font
+        self.font    = font
         self.secrets = secrets
-        self.notifs = []
-        self.error = None
+        self.notifs  = []
+        self.error   = None
 
     def show(self):
-        """Fetch notifications and render"""
         d = self.display
         d.fill(BG)
-        #title bar
         d.fillrect((0, 0), (160, 14), TITLE_BG)
-        draw_text_on_bg(d, self.font, "Github", 8, 3, WHITE, TITLE_BG)
-        draw_text_on_bg(d, self.font, "A:back", 110, 3, GREY, TITLE_BG)
-        draw_text_on_bg(d, self.font, "Loading...", 60, 55, GREEN, BG)
+        draw_text_on_bg(d, self.font, "GitHub", 8,   3, WHITE, TITLE_BG)
+        draw_text_on_bg(d, self.font, "A:back",  110, 3, GREY,  TITLE_BG)
+        d.text((60, 55), "Loading...", GREEN, self.font, 1)
         self._fetch()
         self._draw()
 
@@ -55,7 +57,7 @@ class GithubScreen:
                     self.notifs.append(title)
                 self.error = None
             else:
-                self.error = "HTTP" + str(r.status_code)
+                self.error = "HTTP " + str(r.status_code)
             r.close()
         except Exception as e:
             self.error = str(e)[:22]
@@ -63,7 +65,7 @@ class GithubScreen:
 
     def _draw(self):
         d = self.display
-        d.fillrect((0, 16), (160, 112), BG)
+        d.fillrect((0, 16), (160, 100), BG)
 
         if self.error:
             d.text((8, 50), "Error:", RED, self.font, 1)
@@ -73,12 +75,12 @@ class GithubScreen:
         if not self.notifs:
             d.text((20, 55), "All caught up!", GREEN, self.font, 1)
             return
-        
-        #count badge
-        count = str(len(self.notifs)) + " notification" + ("s" if len(self.notifs) != 1 else "")
+
+        #Count badge
+        count = str(len(self.notifs)) + " notif" + ("s" if len(self.notifs) != 1 else "")
         d.text((8, 18), count, CYAN, self.font, 1)
 
-        #List notifications
+        #Notification list
         y = 30
         for i, title in enumerate(self.notifs):
             color = WHITE if i % 2 == 0 else GREY
@@ -88,8 +90,6 @@ class GithubScreen:
                 break
 
     def handle_input(self, btns):
-        """Returns 'menu' when A is pressed, otherwise None"""
         if btns["A"].pressed():
             return "menu"
         return None
-    
