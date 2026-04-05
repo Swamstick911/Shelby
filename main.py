@@ -140,7 +140,7 @@ while True:
         if current_view == "Clock":
             clock.show_menu_hint(0, gh_count, mail_count)
 
-    # ── A button: layered back navigation ────────────────────────
+    #A button
     if btns["A"].pressed():
         if current_view == "Clock":
             pass
@@ -151,6 +151,10 @@ while True:
             clock.show_menu_hint(0, gh_count, mail_count)
             clock.update()
         else:
+            if current_view == "Settings":
+                clock.use_24h = st_scr.use_24h
+                clock.last_sec = -1
+                clock.needs_full_redraw = True
             current_view = "Menu"
             menu_scr.show()
 

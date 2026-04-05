@@ -1,6 +1,7 @@
 import st7735
 import urequests
 import gc
+from src.utils import draw_text_on_bg
 
 def _c(r, g, b):
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
@@ -27,9 +28,9 @@ class GithubScreen:
         d.fill(BG)
         #title bar
         d.fillrect((0, 0), (160, 14), TITLE_BG)
-        d.text((8, 3), "GitHub", WHITE, self.font, 1)
-        d.text((110, 3), "A:back", GREY, self.font, 1)
-        d.text((60, 55), "Loading...", GREEN, self.font, 1)
+        draw_text_on_bg(d, self.font, "Github", 8, 3, WHITE, TITLE_BG)
+        draw_text_on_bg(d, self.font, "A:back", 110, 3, GREY, TITLE_BG)
+        draw_text_on_bg(d, self.font, "Loading...", 60, 55, GREEN, BG)
         self._fetch()
         self._draw()
 
