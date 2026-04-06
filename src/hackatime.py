@@ -52,6 +52,7 @@ class HackatimeScreen:
     def _fetch(self):
         gc.collect()
         import ubinascii
+        import time
 
         key     = self.secrets.get("hackatime_api_key", "")
         encoded = ubinascii.b2a_base64(key.encode()).decode().strip()
@@ -59,51 +60,78 @@ class HackatimeScreen:
             "Authorization": "Basic " + encoded,
             "Accept":        "application/json"
         }
+        base = "https://hackatime.hackclub.com"
 
+        #Week total and top project
         try:
             r = urequests.get(
-                "https://hackatime.hackclub.com/api/hackatime/v1/users/current/stats/last_7_days",
+                base + "/api/hackatime/v1/users/current/stats/last_7_days",
                 headers=headers
             )
             if r.status_code == 200:
                 data = r.json().get("data", {})
-
-                # Week total
                 self.week = data.get("total_seconds", 0)
 
-                # Today — last item in days array
-                days = data.get("days", [])
-                if days:
-                    self.today = days[-1].get("total_seconds", 0)
-                else:
-                    self.today = 0
-
-                # Streak — from the days array, count consecutive days with > 0
-                streak = 0
-                for day in reversed(days):
-                    if day.get("total_seconds", 0) > 0:
-                        streak += 1
-                    else:
-                        break
-                self.streak = streak
-
-                # Top project
                 projects = data.get("projects", [])
                 if projects:
                     top           = projects[0]
                     self.project  = top.get("name", "")[:14]
                     self.proj_sec = top.get("total_seconds", 0)
 
-                self.error = None
+                #Streak from response if available
+                self.streak = data.get("current_streak", {}).get("days", 0)
             else:
                 self.error = "HTTP " + str(r.status_code)
+                r.close()
+                return
             r.close()
-
+            gc.collect()
         except Exception as e:
             self.error = str(e)[:22]
-            print("Hackatime error:", e)
+            print("Hackatime stats error:", e)
+            gc.collect()
+            return
 
-        gc.collect()
+        #Small delay before second request
+        time.sleep_ms(500)
+
+        #Today
+        try:
+            r2 = urequests.get(
+                base + "/api/hackatime/v1/users/current/statusbar/today",
+                headers=headers
+            )
+            if r2.status_code == 200:
+                today_data = r2.json().get("data", {})
+                self.today = today_data.get("grand_total", {}).get("total_seconds", 0)
+            r2.close()
+            gc.collect()
+        except Exception as e:
+            print("Today fetch error:", e)
+            self.today = 0
+            gc.collect()
+
+        self.error = None
+
+        time.sleep_ms(500)
+
+        #Streak
+        try:
+            r3 = urequests.get(
+                base + "/api/v1/authenticated/streak",
+                headers=headers
+            )
+            print("Streak status:", r3.status_code)
+            print("Streak body:", r3.text[:300])
+            if r3.status_code == 200:
+                streak_data  = r3.json()
+                self.streak  = streak_data.get("current_streak", 0)
+            r3.close()
+            gc.collect()
+        except Exception as e:
+            print("Streak fetch error:", e)
+            self.streak = 0
+            gc.collect()
     
     def _draw(self):
         d = self.display
@@ -128,7 +156,7 @@ class HackatimeScreen:
         y += 4
 
         #This week
-        d.text((8, y), "This week", GREY, self.font, 1)
+        d.text((8, y), "Last 7 days", GREY, self.font, 1)
         y += 12
         week_str = _fmt_seconds(self.week)
         d.text((8, y), week_str, CYAN, self.font, 2)

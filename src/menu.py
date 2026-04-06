@@ -73,28 +73,38 @@ class MenuScreen:
         self._prev_cursor = self.cursor
 
     def handle_input(self, btns):
-        """
-        Call every loop tick
-        returns:
-        "clock" - A pressed go back to clock screen
-        app id str - D pressed to open the app
-        none - no navigation event
-        """
-
-        if btns["A"].pressed():
+        if btns["J"].pressed():
             return "clock"
 
-        elif btns["W"].pressed():
-            self.cursor = (self.cursor - 1) % len(APPS)
-            self.draw()
+        prev = self.cursor
+
+        if btns["W"].pressed():
+            # Move up
+            if self.cursor >= 2:
+                self.cursor -= 2
+                self.draw()
 
         elif btns["S"].pressed():
-            self.cursor = (self.cursor + 1) % len(APPS)
-            self.draw()
+            # Move down
+            if self.cursor <= len(APPS) - 3:
+                self.cursor += 2
+                self.draw()
+
+        elif btns["A"].pressed():
+            # Move left
+            if self.cursor % 2 == 1:
+                self.cursor -= 1
+                self.draw()
 
         elif btns["D"].pressed():
+            # Move right
+            if self.cursor % 2 == 0 and self.cursor + 1 < len(APPS):
+                self.cursor += 1
+                self.draw()
+
+        elif btns["I"].pressed():
             return APPS[self.cursor]["id"]
-        
+
         return None
     
     # Private drawing helpers
@@ -112,7 +122,7 @@ class MenuScreen:
         # Footer hint
         fy = 128 - FOOTER_H
         d.fillrect((0, fy), (160, FOOTER_H), _c(10, 10, 30))
-        hint = "W/S:nav D:open A:back"
+        hint = "W/S:nav I:open J:back"
         hx = (160 - len(hint) * 6) // 2
         d.text((hx, fy + 2), hint, HINT_C, self.font, 1)
 

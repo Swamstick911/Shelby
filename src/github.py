@@ -90,6 +90,8 @@ class GithubScreen:
                 break
 
     def handle_input(self, btns):
-        if btns["A"].pressed():
+        if btns["J"].pressed():
             return "menu"
+        if btns["K"].pressed():
+            self.show()
         return None

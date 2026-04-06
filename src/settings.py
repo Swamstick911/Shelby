@@ -67,7 +67,7 @@ class SettingsScreen:
         if index == 0:
             return "24h" if self.use_24h else "12h"
         if index == 1:
-            return "D to sync"
+            return "I to sync"
         if index == 2:
             return ""
         if index == 3:
@@ -85,11 +85,11 @@ class SettingsScreen:
         #Title bar
         d.fillrect((0, 0), (160, 14), TITLE_BG)
         d.text((8, 3), "Settings", WHITE, self.font, 1)
-        d.text((110, 3), "A:back", GREY, self.font, 1)
+        d.text((110, 3), "J:back", GREY, self.font, 1)
 
         #footer
         d.fillrect((0, 116), (160, 12), TITLE_BG)
-        d.text((0, 118), "W/S:nav   D:select", GREY, self.font, 1)
+        d.text((0, 118), "W/S:nav   I:select", GREY, self.font, 1)
 
         #status message line
         if self._status:
@@ -165,7 +165,7 @@ class SettingsScreen:
             d.text((vx, y), val, vc, self.font, 1)
 
     def handle_input(self, btns):
-        if btns["A"].pressed():
+        if btns["J"].pressed():
             return "menu"
         
         if btns["W"].pressed():
@@ -186,7 +186,7 @@ class SettingsScreen:
             self._draw_row(prev)
             self._draw_row(self.cursor)
 
-        elif btns["D"].pressed():
+        elif btns["I"].pressed():
             if self.cursor == 0:
                 #Toggle 12/24h
                 self.use_24h = not self.use_24h

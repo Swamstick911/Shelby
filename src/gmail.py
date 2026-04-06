@@ -27,7 +27,7 @@ class GmailScreen:
         d.fill(BG)
         d.fillrect((0, 0), (160, 14), TITLE_BG)
         d.text((8, 3), "Gmail", WHITE, self.font, 1)
-        d.text((110, 3), "A:back", GREY,  self.font, 1)
+        d.text((110, 3), "J:back", GREY,  self.font, 1)
         d.text((45, 55), "Fetching...", GREEN, self.font, 1)
         self._fetch()
         self._draw()
@@ -107,6 +107,8 @@ class GmailScreen:
             d.text((lx, 72), label, WHITE, self.font, 1)
 
     def handle_input(self, btns):
-        if btns["A"].pressed():
+        if btns["J"].pressed():
             return "menu"
+        if btns["K"].pressed():
+            self.show()
         return None

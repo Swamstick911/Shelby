@@ -54,7 +54,7 @@ class TaskScreen:
 
         #Footer
         d.fillrect((0, 116), (160, 12), TITLE_BG)
-        d.text((4, 118), "D:done L:del I:sync", GREY, self.font, 1)
+        d.text((4, 118), "I:done L:del K:sync", GREY, self.font, 1)
 
         if not self.tasks:
             d.text((20, 55), "No tasks!", GREY, self.font, 1)
@@ -90,11 +90,11 @@ class TaskScreen:
             y += 14
     
     def handle_input(self, btns):
-        if btns["A"].pressed():
+        if btns["J"].pressed():
             return "menu"
         
         if not self.tasks:
-            if btns["I"].pressed():
+            if btns["K"].pressed():
                 self._load()
                 self._draw()
             return None
@@ -107,7 +107,7 @@ class TaskScreen:
             self.cursor = min(len(self.tasks) - 1, self.cursor + 1)
             self._draw()
 
-        elif btns["D"].pressed():
+        elif btns["I"].pressed():
             #Toggle done
             self.tasks[self.cursor]["done"] = not self.tasks[self.cursor]["done"]
             self._save()
@@ -121,7 +121,7 @@ class TaskScreen:
             self._save()
             self._draw()
         
-        elif btns["I"].pressed():
+        elif btns["K"].pressed():
             self._load()
             self.cursor = 0
             self._draw()

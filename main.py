@@ -143,7 +143,7 @@ while True:
             clock.show_menu_hint(0, gh_count, mail_count)
 
     #A button
-    if btns["A"].pressed():
+    if btns["J"].pressed():
         if current_view == "Clock":
             pass
         elif current_view == "Menu":
@@ -162,7 +162,7 @@ while True:
 
     #Per-screen input
     elif current_view == "Clock":
-        if btns["D"].pressed():
+        if btns["L"].pressed():
             current_view = "Menu"
             menu_scr.show()
 
