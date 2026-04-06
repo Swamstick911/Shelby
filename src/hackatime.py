@@ -51,73 +51,59 @@ class HackatimeScreen:
 
     def _fetch(self):
         gc.collect()
-        key = self.secrets.get("hackatime_api_key", "")
-        headers = {
-            "Authorization": "Bearer " + key,
-            "Accept": "application/json"
-        }
-        base = "https://hackatime.hackclub.com"
+        import ubinascii
 
-        #Fetch today and week stats endpoint
+        key     = self.secrets.get("hackatime_api_key", "")
+        encoded = ubinascii.b2a_base64(key.encode()).decode().strip()
+        headers = {
+            "Authorization": "Basic " + encoded,
+            "Accept":        "application/json"
+        }
+
         try:
             r = urequests.get(
-                base + "api/hackatime/v1/users/current/stats/last_7_days",
-                headers = headers
+                "https://hackatime.hackclub.com/api/hackatime/v1/users/current/stats/last_7_days",
+                headers=headers
             )
             if r.status_code == 200:
                 data = r.json().get("data", {})
+
+                # Week total
                 self.week = data.get("total_seconds", 0)
 
-                #top project
+                # Today — last item in days array
+                days = data.get("days", [])
+                if days:
+                    self.today = days[-1].get("total_seconds", 0)
+                else:
+                    self.today = 0
+
+                # Streak — from the days array, count consecutive days with > 0
+                streak = 0
+                for day in reversed(days):
+                    if day.get("total_seconds", 0) > 0:
+                        streak += 1
+                    else:
+                        break
+                self.streak = streak
+
+                # Top project
                 projects = data.get("projects", [])
                 if projects:
-                    top = projects[0]
-                    self.project = top.get("name", "")[:14]
+                    top           = projects[0]
+                    self.project  = top.get("name", "")[:14]
                     self.proj_sec = top.get("total_seconds", 0)
+
+                self.error = None
             else:
-                self.error = "Stats HTTP" + str(r.status_code)
+                self.error = "HTTP " + str(r.status_code)
             r.close()
-            gc.collect()
+
         except Exception as e:
             self.error = str(e)[:22]
-            print("Hackatime stats error", e)
-            gc.collect()
-            return
-        
-        #Fetch today's hours
-        try:
-            r = urequests.get(
-                base + "api/v1/authenticated/hours",
-                headers=headers
-            )
-            if r.status_code == 200:
-                data = r.json()
-                #returns seconds for today
-                self.today = data.get("seconds", 0)
-            r.close()
-            gc.collect()
-        except Exception as e:
-            print("Hackatime hours error", e)
-            self.today = None
-            gc.collect()
+            print("Hackatime error:", e)
 
-        #Fetch streak
-        try:
-            r = urequests.get(
-                base + "api/v1/authenticated/streak",
-                headers=headers
-            )
-            if r.status_code == 200:
-                data = r.json()
-                self.streak = data.get("current_streak", 0)
-            r.close()
-            gc.collect()
-        except Exception as e:
-            print("Hackatime streak error:", e)
-            self.streak = None
-            gc.collect()
-
-        self.error = None
+        gc.collect()
     
     def _draw(self):
         d = self.display

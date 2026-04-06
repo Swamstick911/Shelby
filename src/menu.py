@@ -1,5 +1,5 @@
 import st7735
-from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings
+from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings, draw_hackatime
 
 def _c(r, g, b):
     """Convert RGB tuple to 16-bit 565 color integer"""
@@ -26,17 +26,21 @@ FOOTER_H = 12
 GRID_Y = TITLE_H + 2
 GRID_H = 128 - TITLE_H - FOOTER_H - 4
 CARD_W = 72
-CARD_H = GRID_H // 2 - 2
+CARD_H = (GRID_H // 3) - 2
 COL0_X = 8
 COL1_X = COL0_X + CARD_W + 8
 ROW0_Y = GRID_Y
-ROW1_Y = GRID_Y + CARD_H + 4
+ROW1_Y = GRID_Y + CARD_H + 3
+ROW2_Y = GRID_Y + (CARD_H + 3) * 2
 
 APPS = [
-    {"id": "github", "label": "GitHub", "draw": draw_github, "pos": (0, 0)},
-    {"id": "gmail", "label": "Gmail", "draw": draw_gmail, "pos": (0, 1)},
-    {"id": "tasks", "label": "Tasks", "draw": draw_tasks, "pos": (1, 0)},
-    {"id": "settings", "label": "Settings", "draw": draw_settings, "pos": (1, 1)},
+    {"id": "github", "label": "GitHub", "draw": draw_github},
+    {"id": "gmail", "label": "Gmail", "draw": draw_gmail},
+    {"id": "tasks", "label": "Tasks", "draw": draw_tasks},
+    {"id": "settings", "label": "Settings", "draw": draw_settings},
+    {"id": "hackatime", "label": "Hackatime", "draw": draw_hackatime},
+    {"id": "none", "label": "More soon", "draw": draw_settings}, #placeholder
+
 ]
 # Flat order for cursor: 0= Github, 1= Gmail, 2= Tasks, 3= Settings
 # W=prev, S=next {wraps}, D= Select, A= Back
@@ -121,7 +125,12 @@ class MenuScreen:
         row = index // 2
         col = index % 2
         x = COL0_X if col == 0 else COL1_X
-        y = ROW0_Y if row == 0 else ROW1_Y
+        if row == 0:
+            y = ROW0_Y
+        elif row == 1:
+            y = ROW1_Y
+        else:
+            y = ROW2_Y
         return x, y, CARD_W, CARD_H
 
     def _draw_card(self, index):
@@ -147,8 +156,8 @@ class MenuScreen:
             d.text((x + 2, y + 2), ">", ICON_SEL_C, self.font, 1)
 
         # Icon — centred in the upper portion of the card
-        icon_x = x + (w - 24) // 2
-        icon_y = y + 6
+        icon_x = x + (w - 16) // 2
+        icon_y = y + 4
         ic = ICON_SEL_C if sel else ICON_C
         app["draw"](d, icon_x, icon_y, ic)
 
@@ -156,6 +165,6 @@ class MenuScreen:
         label = app["label"]
         lw    = len(label) * 6
         lx    = x + (w - lw) // 2
-        ly    = y + h - 12
+        ly    = y + h - 10
         lc    = LABEL_SEL_C if sel else LABEL_C
         d.text((lx, ly), label, lc, self.font, 1)

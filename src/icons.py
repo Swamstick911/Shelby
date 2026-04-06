@@ -66,3 +66,18 @@ def draw_settings(display, x, y, color):
     display.fillrect((x+16, y+6),  (2, 2), color)
     display.fillrect((x+6,  y+16), (2, 2), color)
     display.fillrect((x+16, y+16), (2, 2), color)
+
+def draw_hackatime(display, x, y, color):
+    """Clock face with a lightning bolt — coding time tracker."""
+    # Clock circle (outline)
+    display.line((x+4,  y),    (x+20, y),    color)  # top
+    display.line((x+4,  y+20), (x+20, y+20), color)  # bottom
+    display.line((x,    y+4),  (x,    y+16), color)  # left
+    display.line((x+24, y+4),  (x+24, y+16), color)  # right
+    # Clock hands
+    display.line((x+12, y+4),  (x+12, y+12), color)  # hour hand up
+    display.line((x+12, y+12), (x+18, y+12), color)  # minute hand right
+    # Lightning bolt (coding = energy)
+    display.line((x+14, y+14), (x+10, y+20), color)
+    display.line((x+10, y+20), (x+13, y+20), color)
+    display.line((x+13, y+20), (x+9,  y+24), color)
