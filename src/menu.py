@@ -1,16 +1,18 @@
 import st7735
 from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings, draw_hackatime
 
+
 def _c(r, g, b):
     """Convert RGB tuple to 16-bit 565 color integer"""
-    return((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
 
-#colour palette
+
+#Colour palette
 BG = st7735.TFT.BLACK
 TITLE_C = st7735.TFT.WHITE
 HINT_C = _c(80, 80, 80)
 
-#Card colours
+# Card colours
 CARD_BG = _c(20, 20, 40)
 CARD_SEL = _c(40, 80, 120)
 ICON_C = st7735.TFT.WHITE
@@ -20,30 +22,31 @@ LABEL_SEL_C = st7735.TFT.WHITE
 BORDER_C = _c(60, 60, 100)
 BORDER_SEL_C = st7735.TFT.CYAN
 
-# Layout constants
+
+#Layout constants
 TITLE_H = 14
 FOOTER_H = 12
-GRID_Y = TITLE_H + 2
-GRID_H = 128 - TITLE_H - FOOTER_H - 4
-CARD_W = 72
-CARD_H = (GRID_H // 3) - 2
-COL0_X = 8
-COL1_X = COL0_X + CARD_W + 8
-ROW0_Y = GRID_Y
-ROW1_Y = GRID_Y + CARD_H + 3
-ROW2_Y = GRID_Y + (CARD_H + 3) * 2
+COLS = 3
+ROWS = 2
+PADDING = 4
+GRID_X = PADDING
+GRID_Y = TITLE_H + PADDING
+GRID_W = 160 - PADDING * 2
+GRID_H = 128 - TITLE_H - FOOTER_H - PADDING * 2
+CARD_W = (GRID_W - PADDING * (COLS - 1)) // COLS
+CARD_H = (GRID_H - PADDING * (ROWS - 1)) // ROWS
+
 
 APPS = [
-    {"id": "github", "label": "GitHub", "draw": draw_github},
-    {"id": "gmail", "label": "Gmail", "draw": draw_gmail},
-    {"id": "tasks", "label": "Tasks", "draw": draw_tasks},
-    {"id": "settings", "label": "Settings", "draw": draw_settings},
-    {"id": "hackatime", "label": "Hackatime", "draw": draw_hackatime},
-    {"id": "none", "label": "More soon", "draw": draw_settings}, #placeholder
-
+    {"id": "github",    "label": "GitHub",    "draw": draw_github},
+    {"id": "gmail",     "label": "Gmail",     "draw": draw_gmail},
+    {"id": "tasks",     "label": "Tasks",     "draw": draw_tasks},
+    {"id": "hackatime", "label": "Hakatime", "draw": draw_hackatime},
+    {"id": "settings",  "label": "Settings",  "draw": draw_settings},
+    {"id": "none",      "label": "Soon",      "draw": draw_settings},
 ]
-# Flat order for cursor: 0= Github, 1= Gmail, 2= Tasks, 3= Settings
-# W=prev, S=next {wraps}, D= Select, A= Back
+#Navigation: W=up, S=down, A=left, D=right, I=select, J=back
+
 
 class MenuScreen:
     def __init__(self, display, font):
@@ -53,52 +56,52 @@ class MenuScreen:
         self._drawn = False
         self._prev_cursor = -1
 
+
     # Public API
 
     def show(self):
-        """Force a full repaint call when entering the menu"""
-        self._drawn = False
+        """Force a full repaint when entering the menu"""
+        self._drawn       = False
         self._prev_cursor = -1
         self.draw()
 
+
     def draw(self):
-        """Smart draw, full repaint on the first show card only on cusror move"""
+        """Smart draw — full repaint first time, only changed cards after"""
         if not self._drawn:
             self._full_draw()
             self._drawn = True
         elif self._prev_cursor != self.cursor:
-            #Only redraw when the two cards that changed
             self._draw_card(self._prev_cursor)
             self._draw_card(self.cursor)
         self._prev_cursor = self.cursor
+
 
     def handle_input(self, btns):
         if btns["J"].pressed():
             return "clock"
 
-        prev = self.cursor
-
         if btns["W"].pressed():
-            # Move up
-            if self.cursor >= 2:
-                self.cursor -= 2
+            #Move up one row
+            if self.cursor >= COLS:
+                self.cursor -= COLS
                 self.draw()
 
         elif btns["S"].pressed():
-            # Move down
-            if self.cursor <= len(APPS) - 3:
-                self.cursor += 2
+            #Move down one row
+            if self.cursor + COLS < len(APPS):
+                self.cursor += COLS
                 self.draw()
 
         elif btns["A"].pressed():
-            # Move left
-            if self.cursor % 2 == 1:
+            #Move left
+            if self.cursor % COLS != 0:
                 self.cursor -= 1
                 self.draw()
 
         elif btns["D"].pressed():
-            # Move right
-            if self.cursor % 2 == 0 and self.cursor + 1 < len(APPS):
+            #Move right
+            if self.cursor % COLS != COLS - 1 and self.cursor + 1 < len(APPS):
                 self.cursor += 1
                 self.draw()
 
@@ -106,14 +109,15 @@ class MenuScreen:
             return APPS[self.cursor]["id"]
 
         return None
-    
-    # Private drawing helpers
+
+
+    #Private drawing helpers
 
     def _full_draw(self):
         d = self.display
         d.fill(BG)
 
-        # Title bar
+        #Title bar
         d.fillrect((0, 0), (160, TITLE_H), _c(10, 10, 30))
         title = "SHELBY OS"
         tx = (160 - len(title) * 6) // 2
@@ -122,26 +126,23 @@ class MenuScreen:
         # Footer hint
         fy = 128 - FOOTER_H
         d.fillrect((0, fy), (160, FOOTER_H), _c(10, 10, 30))
-        hint = "W/S:nav I:open J:back"
+        hint = "WASD:nav  I:open  J:back"
         hx = (160 - len(hint) * 6) // 2
         d.text((hx, fy + 2), hint, HINT_C, self.font, 1)
 
-        # Draw all 4 cards
+        # Draw all cards
         for i in range(len(APPS)):
             self._draw_card(i)
 
+
     def _card_rect(self, index):
-        """Returns (x, y, w, h) for the card"""
-        row = index // 2
-        col = index % 2
-        x = COL0_X if col == 0 else COL1_X
-        if row == 0:
-            y = ROW0_Y
-        elif row == 1:
-            y = ROW1_Y
-        else:
-            y = ROW2_Y
+        """Returns (x, y, w, h) for card at index in 3x2 grid"""
+        row = index // COLS
+        col = index % COLS
+        x   = GRID_X + col * (CARD_W + PADDING)
+        y   = GRID_Y + row * (CARD_H + PADDING)
         return x, y, CARD_W, CARD_H
+
 
     def _draw_card(self, index):
         d   = self.display
@@ -151,27 +152,22 @@ class MenuScreen:
         x, y, w, h = self._card_rect(index)
 
         # Card background
-        bg_col = CARD_SEL if sel else CARD_BG
-        d.fillrect((x, y), (w, h), bg_col)
+        d.fillrect((x, y), (w, h), CARD_SEL if sel else CARD_BG)
 
-        # Border — drawn as 4 lines (driver has no rect outline method)
+        # Border
         bc = BORDER_SEL_C if sel else BORDER_C
         d.line((x,     y),     (x+w-1, y),     bc)  # top
         d.line((x,     y+h-1), (x+w-1, y+h-1), bc)  # bottom
         d.line((x,     y),     (x,     y+h-1), bc)  # left
         d.line((x+w-1, y),     (x+w-1, y+h-1), bc)  # right
 
-        # Arrow indicator when selected
-        if sel:
-            d.text((x + 2, y + 2), ">", ICON_SEL_C, self.font, 1)
-
-        # Icon — centred in the upper portion of the card
+        # Icon
+        ic     = ICON_SEL_C if sel else ICON_C
         icon_x = x + (w - 16) // 2
-        icon_y = y + 4
-        ic = ICON_SEL_C if sel else ICON_C
+        icon_y = y + 6
         app["draw"](d, icon_x, icon_y, ic)
 
-        # Label — centred at the bottom of the card
+        # Label
         label = app["label"]
         lw    = len(label) * 6
         lx    = x + (w - lw) // 2
