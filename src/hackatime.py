@@ -121,8 +121,6 @@ class HackatimeScreen:
                 base + "/api/v1/authenticated/streak",
                 headers=headers
             )
-            print("Streak status:", r3.status_code)
-            print("Streak body:", r3.text[:300])
             if r3.status_code == 200:
                 streak_data  = r3.json()
                 self.streak  = streak_data.get("current_streak", 0)
@@ -166,14 +164,16 @@ class HackatimeScreen:
         d.line((8, y), (152, y), GREY)
         y += 4
 
-        #Streak
-        streak_str = (str(self.streak) + "d streak") if self.streak else "No streak"
-        d.text((8, y), streak_str, PURPLE, self.font, 1)
-
+        #Top project
+        d.text((8, y), "Top Project", GREY, self.font, 1)
+        y += 12
         if self.project:
-            proj_str = self.project
-            px = 158 - len(proj_str) * 6
-            d.text((px, y), proj_str, GREEN, self.font, 1)
+            proj_time = _fmt_seconds(self.proj_sec)
+            d.text((8, y), self.project, GREEN, self.font, 1)
+            px = 158 - len(proj_time) * 6
+            d.text((px, y), proj_time, YELLOW, self.font, 1)
+        else:
+            d.text((8, y), "No data", GREY, self.font, 1)
 
     def handle_input(self, btns):
         if btns["J"].pressed():
