@@ -3,8 +3,10 @@ import gc
 import machine
 import network
 
+
 def _c(r, g, b):
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+
 
 BG = st7735.TFT.BLACK
 WHITE = st7735.TFT.WHITE
@@ -16,15 +18,28 @@ GREY = _c(120, 120, 120)
 TITLE_BG = _c(10, 10, 30)
 SEL_BG = _c(20, 40, 60)
 
-ITEMS = [
-    "12/24h clock",
-    "re-sync NTP",
-    "System info",
-    "Board",
-    "IP address",
-    "Free RAM",    
+
+CPU_MODES = [
+    ("Normal", 125_000_000),
+    ("Turbo", 200_000_000),
+    ("Overclock", 250_000_000),
 ]
-INTERACTIVE = {0, 1}
+
+# Page 0 (interactive)
+PAGE0 = [
+    "12/24h clock",
+    "CPU mode",
+    "Re-sync NTP",
+]
+
+# Page 1 (system info (read only))
+PAGE1 = [
+    "Board ID",
+    "IP address",
+    "Free RAM",
+    "CPU speed",
+]
+
 
 class SettingsScreen:
     def __init__(self, display, font, secrets, wifi_mgr=None):
@@ -33,14 +48,21 @@ class SettingsScreen:
         self.secrets = secrets
         self.wifi_mgr = wifi_mgr
         self.cursor = 0
+        self.page = 0
         self.use_24h = False
+        self.cpu_mode = 0
         self._status = ""
         self._status_color = GREEN
 
+
     def show(self):
         self.cursor = 0
+        self.page = 0
         self._status = ""
         self._draw()
+
+
+    #value helpers
 
     def _get_ip(self):
         try:
@@ -48,7 +70,7 @@ class SettingsScreen:
             return wlan.ifconfig()[0]
         except:
             return "No WiFi"
-    
+
     def _get_ram(self):
         gc.collect()
         free = gc.mem_free()
@@ -61,23 +83,33 @@ class SettingsScreen:
             return machine.unique_id().hex()[:12]
         except:
             return "Pico W"
-        
-    def _row_value(self, index):
-        """Returns the right-hand value string for each row"""
+
+    def _get_cpu_speed(self):
+        return str(machine.freq() // 1_000_000) + " MHz"
+
+    def _page0_value(self, index):
         if index == 0:
             return "24h" if self.use_24h else "12h"
         if index == 1:
-            return "I to sync"
+            return CPU_MODES[self.cpu_mode][0]
         if index == 2:
-            return ""
-        if index == 3:
-            return self._get_board()
-        if index == 4:
-            return self._get_ip()
-        if index == 5:
-            return self._get_ram()
+            return "press I"
         return ""
-    
+
+    def _page1_value(self, index):
+        if index == 0:
+            return self._get_board()
+        if index == 1:
+            return self._get_ip()
+        if index == 2:
+            return self._get_ram()
+        if index == 3:
+            return self._get_cpu_speed()
+        return ""
+
+
+    #drawing
+
     def _draw(self):
         d = self.display
         d.fill(BG)
@@ -87,130 +119,131 @@ class SettingsScreen:
         d.text((8, 3), "Settings", WHITE, self.font, 1)
         d.text((110, 3), "J:back", GREY, self.font, 1)
 
-        #footer
-        d.fillrect((0, 116), (160, 12), TITLE_BG)
-        d.text((0, 118), "W/S:nav   I:select", GREY, self.font, 1)
+        #Page indicator dots
+        for p in range(2):
+            dot_x = 74 + p * 8
+            col = WHITE if p == self.page else GREY
+            d.fillrect((dot_x, 5), (4, 4), col)
 
-        #status message line
-        if self._status:
+        #Footer
+        d.fillrect((0, 116), (160, 12), TITLE_BG)
+        if self.page == 0:
+            d.text((4, 118), "W/S:nav  I:sel  D:info", GREY, self.font, 1)
+        else:
+            d.text((4, 118), "A:back to settings", GREY, self.font, 1)
+
+        #Status message (page 0 only)
+        if self._status and self.page == 0:
             sx = (160 - len(self._status) * 6) // 2
             d.text((sx, 106), self._status, self._status_color, self.font, 1)
 
-        #Draw rows
-        y = 18
-        for i, label in enumerate(ITEMS):
-            sel = (i == self.cursor)
-            is_header = (i == 2)
+        #Rows
+        items = PAGE0 if self.page == 0 else PAGE1
+        y = 22
+        for i, label in enumerate(items):
+            sel = (i == self.cursor) and (self.page == 0)
 
-            if is_header:
-                lx = (160 - len(label) * 6) // 2
-                d.text((lx, y), label, GREY, self.font, 1)
-                y += 15
-                continue
-
-            #Arrow on selected interactive row
-            if sel and i in INTERACTIVE:
+            if sel:
+                d.fillrect((0, y - 1), (160, 13), SEL_BG)
                 d.text((2, y), ">", CYAN, self.font, 1)
 
-            #label
-            lc = CYAN if (sel and i in INTERACTIVE) else WHITE
+            lc = CYAN if sel else WHITE
             d.text((12, y), label, lc, self.font, 1)
 
-            #value
-            val = self._row_value(i)
+            val = self._page0_value(i) if self.page == 0 else self._page1_value(i)
             if val:
                 vx = 158 - len(val) * 6
-                vc = YELLOW if (sel and i in INTERACTIVE) else GREY
+                vc = YELLOW if sel else GREY
                 d.text((vx, y), val, vc, self.font, 1)
 
-            y += 15
+            y += 18
 
-    def _draw_row(self, index):
-        """Redraw a single row without full repaint"""
-        y = 18
-        for i in range(index + 1):
-            if i == 2:
-                y += 15
-                continue
-            if i == index:
-                break
-            y += 15
 
+    def _redraw_row(self, index):
+        """Redraw a single row on page 0"""
         d = self.display
+        y = 22 + index * 18
         sel = (index == self.cursor)
-        is_header = (index == 2)
 
-        #clear the row
-        d.fillrect((0, y - 1), (160, 13), BG)
+        d.fillrect((0, y - 1), (160, 13), SEL_BG if sel else BG)
 
-        if is_header:
-            label = ITEMS[index]
-            lx = (160 - len(label) * 6) // 2
-            d.text((lx, y), label, GREY, self.font, 1)
-            return
-        
         if sel:
-            d.fillrect((0, y - 1), (160, 13), SEL_BG)
-
-        if sel and index in INTERACTIVE:
             d.text((2, y), ">", CYAN, self.font, 1)
 
-        lc = CYAN if (sel and index in INTERACTIVE) else WHITE
-        d.text((12, y), ITEMS[index], lc, self.font, 1)
+        lc = CYAN if sel else WHITE
+        d.text((12, y), PAGE0[index], lc, self.font, 1)
 
-        val = self._row_value(index)
+        val = self._page0_value(index)
         if val:
             vx = 158 - len(val) * 6
-            vc = YELLOW if (sel and index in INTERACTIVE) else GREY
+            vc = YELLOW if sel else GREY
             d.text((vx, y), val, vc, self.font, 1)
+
+
+    #input
 
     def handle_input(self, btns):
         if btns["J"].pressed():
             return "menu"
-        
-        if btns["W"].pressed():
-            prev = self.cursor
-            self.cursor = (self.cursor - 1) % len(ITEMS)
-            #Skip section header
-            if self.cursor == 2:
-                self.cursor = 1
-            self._draw_row(prev)
-            self._draw_row(self.cursor)
 
-        elif btns["S"].pressed():
-            prev = self.cursor
-            self.cursor = (self.cursor + 1) % len(ITEMS)
-            #Skip section header
-            if self.cursor == 2:
-                self.cursor = 3
-            self._draw_row(prev)
-            self._draw_row(self.cursor)
+        if self.page == 0:
+            if btns["W"].pressed():
+                prev = self.cursor
+                self.cursor = (self.cursor - 1) % len(PAGE0)
+                self._redraw_row(prev)
+                self._redraw_row(self.cursor)
 
-        elif btns["I"].pressed():
-            if self.cursor == 0:
-                #Toggle 12/24h
-                self.use_24h = not self.use_24h
-                self._status = "24h on!" if self.use_24h else "12h on!"
-                self._status_color = GREEN
+            elif btns["S"].pressed():
+                prev = self.cursor
+                self.cursor = (self.cursor + 1) % len(PAGE0)
+                self._redraw_row(prev)
+                self._redraw_row(self.cursor)
+
+            elif btns["D"].pressed():
+                #Go to info page
+                self.page = 1
+                self.cursor = 0
+                self._status = ""
                 self._draw()
 
-            elif self.cursor == 1:
-                #Re-sync NTP
-                if self.wifi_mgr:
-                    self._status = "Syncing..."
-                    self._status_color = YELLOW
-                    self._draw()
-                    try:
-                        self.wifi_mgr.sync_time()
-                        self._status = "Time Synced!"
-                        self._status_color = GREEN
-                    except Exception as e:
-                        self._status = "Sync failed"
-                        self._status_color = RED
-                    self._draw()
-                else:
-                    self._status = "No WiFi mgr"
-                    self._status_color = RED
+            elif btns["I"].pressed():
+                if self.cursor == 0:
+                    self.use_24h = not self.use_24h
+                    self._status = "24h on!" if self.use_24h else "12h on!"
+                    self._status_color = GREEN
                     self._draw()
 
-            return None
+                elif self.cursor == 1:
+                    self.cpu_mode = (self.cpu_mode + 1) % len(CPU_MODES)
+                    name, freq = CPU_MODES[self.cpu_mode]
+                    machine.freq(freq)
+                    self._status = name + " " + str(freq // 1_000_000) + "MHz"
+                    self._status_color = YELLOW if self.cpu_mode > 0 else GREEN
+                    self._draw()
+
+                elif self.cursor == 2:
+                    if self.wifi_mgr:
+                        self._status = "Syncing..."
+                        self._status_color = YELLOW
+                        self._draw()
+                        try:
+                            self.wifi_mgr.sync_time()
+                            self._status = "Time synced!"
+                            self._status_color = GREEN
+                        except:
+                            self._status = "Sync failed"
+                            self._status_color = RED
+                        self._draw()
+                    else:
+                        self._status = "No WiFi mgr"
+                        self._status_color = RED
+                        self._draw()
+
+        else:
+            #Page 1 (info only, A to go back)
+            if btns["A"].pressed():
+                self.page = 0
+                self.cursor = 0
+                self._draw()
+
+        return None
