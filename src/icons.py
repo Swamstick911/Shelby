@@ -18,6 +18,7 @@ def draw_github(display, x, y, color):
     display.fillrect((x+8,  y+12), (2, 2), color)
     display.fillrect((x+14, y+12), (2, 2), color)
 
+
 def draw_gmail(display, x, y, color):
     # Envelope body
     display.line((x+2,  y+5),  (x+22, y+5),  color)  # top
@@ -30,6 +31,7 @@ def draw_gmail(display, x, y, color):
     # Bottom fold lines
     display.line((x+2,  y+19), (x+8,  y+14), color)
     display.line((x+22, y+19), (x+16, y+14), color)
+
 
 def draw_tasks(display, x, y, color):
     # Clipboard body
@@ -44,6 +46,7 @@ def draw_tasks(display, x, y, color):
     display.line((x+7,  y+13), (x+11, y+17), color)
     display.line((x+11, y+16), (x+17, y+8),  color)
     display.line((x+11, y+17), (x+17, y+9),  color)
+
 
 def draw_settings(display, x, y, color):
     # Inner hole
@@ -67,6 +70,7 @@ def draw_settings(display, x, y, color):
     display.fillrect((x+6,  y+16), (2, 2), color)
     display.fillrect((x+16, y+16), (2, 2), color)
 
+
 def draw_hackatime(display, x, y, color):
     """Clock face with a lightning bolt — coding time tracker."""
     # Clock circle (outline)
@@ -81,3 +85,16 @@ def draw_hackatime(display, x, y, color):
     display.line((x+14, y+14), (x+10, y+20), color)
     display.line((x+10, y+20), (x+13, y+20), color)
     display.line((x+13, y+20), (x+9,  y+24), color)
+
+
+def draw_music(display, x, y, color):
+    """Music note — filled note head with stem and flag."""
+    # Note head (filled oval approximated with rects)
+    display.fillrect((x+4,  y+16), (6, 4), color)  # main body
+    display.fillrect((x+3,  y+17), (8, 2), color)  # wider middle
+    # Stem (right side of head, going up)
+    display.line((x+10, y+4), (x+10, y+18), color)
+    # Flag on stem
+    display.line((x+10, y+4),  (x+16, y+7),  color)  # flag top
+    display.line((x+10, y+8),  (x+16, y+11), color)  # flag bottom curve
+    display.line((x+16, y+7),  (x+16, y+11), color)  # flag right edge

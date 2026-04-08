@@ -1,5 +1,5 @@
 import st7735
-from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings, draw_hackatime
+from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings, draw_hackatime, draw_music
 
 
 def _c(r, g, b):
@@ -41,9 +41,9 @@ APPS = [
     {"id": "github",    "label": "GitHub",    "draw": draw_github},
     {"id": "gmail",     "label": "Gmail",     "draw": draw_gmail},
     {"id": "tasks",     "label": "Tasks",     "draw": draw_tasks},
-    {"id": "hackatime", "label": "Hakatime", "draw": draw_hackatime},
+    {"id": "hackatime", "label": "Hakatime",  "draw": draw_hackatime},
     {"id": "settings",  "label": "Settings",  "draw": draw_settings},
-    {"id": "none",      "label": "Soon",      "draw": draw_settings},
+    {"id": "music",     "label": "Music",     "draw": draw_music},
 ]
 #Navigation: W=up, S=down, A=left, D=right, I=select, J=back
 

@@ -89,6 +89,7 @@ from src.gmail    import GmailScreen
 from src.tasks    import TaskScreen
 from src.settings import SettingsScreen
 from src.hackatime import HackatimeScreen
+from src.music import MusicScreen
 
 clock = ClockScreen(display)
 menu_scr = MenuScreen(display, FONT)
@@ -97,6 +98,7 @@ gm_scr = GmailScreen(display, FONT, secrets)
 tk_scr = TaskScreen(display, FONT)
 st_scr = SettingsScreen(display, FONT, secrets, wifi_mgr)
 ht_scr = HackatimeScreen(display, FONT, secrets)
+mu_scr = MusicScreen(display, FONT)
 
 clock.show_menu_hint(0)
 clock.update()
@@ -193,6 +195,10 @@ while True:
         elif result == "hackatime":
             current_view = "Hackatime"
             ht_scr.show()
+        
+        elif result == "music":
+            current_view = "Music"
+            mu_scr.show()
 
     #Active screen input handling
     elif current_view == "GitHub":
@@ -224,6 +230,12 @@ while True:
 
     elif current_view == "Hackatime":
         result = ht_scr.handle_input(btns)
+        if result == "menu":
+            current_view = "Menu"
+            menu_scr.show()
+
+    elif current_view == "Music":
+        result = mu_scr.handle_input(btns)
         if result == "menu":
             current_view = "Menu"
             menu_scr.show()
