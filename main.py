@@ -144,7 +144,7 @@ while True:
         if current_view == "Clock":
             clock.show_menu_hint(0, gh_count, mail_count)
 
-    #A button
+    #J button
     if btns["J"].pressed():
         if current_view == "Clock":
             pass
