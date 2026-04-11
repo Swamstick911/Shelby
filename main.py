@@ -1,10 +1,10 @@
 import machine
 import time
-from machine import Pin, SPI
-import st7735
-from src.font import FONT
 import gc
 import urequests
+from machine import Pin, SPI, WDT
+import st7735
+from src.font import FONT
 
 
 # 1. Display init FIRST
@@ -87,7 +87,7 @@ except Exception as e:
 from src.clock    import ClockScreen
 from src.menu     import MenuScreen
 from src.github   import GithubScreen
-from src.gmail    import GmailScreen
+from src.games    import GamesScreen
 from src.tasks    import TaskScreen
 from src.settings import SettingsScreen
 from src.hackatime import HackatimeScreen
@@ -97,7 +97,7 @@ from src.weather import WeatherManager
 clock = ClockScreen(display)
 menu_scr = MenuScreen(display, FONT)
 gh_scr = GithubScreen(display, FONT, secrets)
-gm_scr = GmailScreen(display, FONT, secrets)
+games_scr = GamesScreen(display, FONT)
 tk_scr = TaskScreen(display, FONT)
 st_scr = SettingsScreen(display, FONT, secrets, wifi_mgr)
 ht_scr = HackatimeScreen(display, FONT, secrets)
@@ -113,17 +113,20 @@ clock.update()
 
 
 # 6. Navigation state
-current_view   = "Clock"
+current_view  = "Clock"
 last_gh_fetch = time.ticks_ms() - 300000
 last_we_fetch = time.ticks_ms()
-gh_count       = 0
-mail_count     = 0
+gh_count      = 0
 
 print("Shelby OS started.")
 
+# Hardware Watchdog - Will reboot the Pico if the loop hangs for 8 seconds
+wdt = WDT(timeout=8000)
 
 # 7. Main loop
 while True:
+    wdt.feed()  # Pet the watchdog
+    
     for b in btns.values():
         b.update()
 
@@ -132,9 +135,6 @@ while True:
 
     # Background GitHub fetch every 5 min
         # Background GitHub fetch every 5 min
-        # Background GitHub fetch every 5 min
-        # Background GitHub fetch every 5 min
-        # Background GitHub fetch every 5 min
     if wifi_connected and time.ticks_diff(time.ticks_ms(), last_gh_fetch) > 300000:
         gc.collect()
         try:
@@ -142,39 +142,42 @@ while True:
                 "Authorization": f"Bearer {secrets.get('github_token', '')}",
                 "User-Agent": "Sprig-Shelby"
             }
-            # Stream the response instead of loading it all at once
+            # Add timeout to prevent socket hangs
             r = urequests.get(
                 "https://api.github.com/notifications?per_page=5",
                 headers=headers,
-                stream=True  # Important: Tells urequests not to buffer the whole thing
+                stream=True,
+                timeout=5
             )
             
             if r.status_code == 200:
                 gh_count = 0
                 while True:
-                    # Read exactly 256 bytes at a time
-                    chunk = r.raw.read(256)
+                    wdt.feed() # Keep watchdog happy during slow downloads
+                    chunk = r.raw.read(128) # Dropped from 256 to 128 bytes to save even more RAM
                     if not chunk:
                         break
-                    # Count in this tiny chunk, then throw it away
                     gh_count += chunk.decode("utf-8", "ignore").count('"id":')
                     del chunk
             
+            # The critical memory fix: explicitly close the raw socket AND the response
+            try:
+                r.raw.close()
+            except:
+                pass
             r.close()
             del r
             
         except Exception as e:
-            print(f"GH refresh failed: {e}")
+            print(f"Badge fetch error: {e}")
             
         gc.collect()
         last_gh_fetch = time.ticks_ms()
         if current_view == "Clock":
-            clock.show_menu_hint(0, gh_count, mail_count)
+            clock.show_menu_hint(0, gh_count, 0)
 
-    # Background Weather fetch (WeatherManager internally limits to 15 min)
-    # We check it every 60 seconds here so it doesn't run in the exact same loop as GitHub
+    # Background Weather fetch every 60 seconds (Manager enforces 15m API limit internally)
     if wifi_connected and time.ticks_diff(time.ticks_ms(), last_we_fetch) > 60000:
-        import gc
         gc.collect()
         changed = weather_mgr.update()
         if changed:
@@ -185,26 +188,19 @@ while True:
         gc.collect()
         last_we_fetch = time.ticks_ms()
 
-    #J button
+    # J button - Global back to menu
     if btns["J"].pressed():
-        if current_view == "Clock":
-            pass
-        elif current_view == "Menu":
+        if current_view == "Menu":
             current_view = "Clock"
             clock.last_sec = -1
             clock.needs_full_redraw = True
-            clock.show_menu_hint(0, gh_count, mail_count)
+            clock.show_menu_hint(0, gh_count, 0)
             clock.update()
-        else:
-            if current_view == "Settings":
-                clock.use_24h = st_scr.use_24h
-                clock.last_sec = -1
-                clock.needs_full_redraw = True
-            current_view = "Menu"
-            menu_scr.show()
+        elif current_view in ["Settings", "GitHub", "Games", "Tasks", "Hackatime", "Music"]:
+            pass # Active screen handles J itself
 
-    #Per-screen input
-    elif current_view == "Clock":
+    # Per-screen input
+    if current_view == "Clock":
         if btns["L"].pressed():
             current_view = "Menu"
             menu_scr.show()
@@ -218,12 +214,12 @@ while True:
                 current_view = "GitHub"
                 gh_scr.show()
 
-        elif result == "gmail":
+        elif result == "games":
             if not wifi_connected:
                 current_view = "Menu"
             else:
-                current_view = "Gmail"
-                gm_scr.show()
+                current_view = "Games"
+                games_scr.show()
 
         elif result == "tasks":
             current_view = "Tasks"
@@ -241,15 +237,15 @@ while True:
             current_view = "Music"
             mu_scr.show()
 
-    #Active screen input handling
+    # Active screen input handling
     elif current_view == "GitHub":
         result = gh_scr.handle_input(btns)
         if result == "menu":
             current_view = "Menu"
             menu_scr.show()
 
-    elif current_view == "Gmail":
-        result = gm_scr.handle_input(btns)
+    elif current_view == "Games":
+        result = games_scr.handle_input(btns)
         if result == "menu":
             current_view = "Menu"
             menu_scr.show()

@@ -98,3 +98,23 @@ def draw_music(display, x, y, color):
     display.line((x+10, y+4),  (x+16, y+7),  color)  # flag top
     display.line((x+10, y+8),  (x+16, y+11), color)  # flag bottom curve
     display.line((x+16, y+7),  (x+16, y+11), color)  # flag right edge
+
+def draw_games(display, x, y, color):
+    """Gamepad icon"""
+    #Outer controller body
+    display.line((x+2, y+6), (x+22, y+6), color)
+    display.line((x+2, y+18), (x+22, y+18), color)
+    display.line((x+2, y+6), (x+2, y+18), color)
+    display.line((x+22, y+6), (x+22, y+18), color)
+
+    #Left side
+    display.fillrect((x+6, y+11), (4, 2), color)
+    display.fillrect((x+7, y+10), (2, 4), color)
+
+    #right side
+    display.fillrect((x+15, y+13), (2, 2), color)
+    display.fillrect((x+18, y+10), (2, 2), color)
+
+    #Middle
+    display.line((x+11, y+16), (x+13, y+14), color)
+    display.line((x+8, y+16), (x+10, y+14), color)

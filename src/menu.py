@@ -1,5 +1,5 @@
 import st7735
-from src.icons import draw_github, draw_gmail, draw_tasks, draw_settings, draw_hackatime, draw_music
+from src.icons import draw_github, draw_games, draw_tasks, draw_settings, draw_hackatime, draw_music
 
 
 def _c(r, g, b):
@@ -39,7 +39,7 @@ CARD_H = (GRID_H - PADDING * (ROWS - 1)) // ROWS
 
 APPS = [
     {"id": "github",    "label": "GitHub",    "draw": draw_github},
-    {"id": "gmail",     "label": "Gmail",     "draw": draw_gmail},
+    {"id": "games",     "label": "Games",     "draw": draw_games},
     {"id": "tasks",     "label": "Tasks",     "draw": draw_tasks},
     {"id": "hackatime", "label": "Hakatime",  "draw": draw_hackatime},
     {"id": "settings",  "label": "Settings",  "draw": draw_settings},
@@ -61,7 +61,7 @@ class MenuScreen:
 
     def show(self):
         """Force a full repaint when entering the menu"""
-        self._drawn       = False
+        self._drawn = False
         self._prev_cursor = -1
         self.draw()
 
