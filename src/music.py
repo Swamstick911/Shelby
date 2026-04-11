@@ -38,9 +38,10 @@ _WAVETABLE = array.array('h', [
 
 
 class MusicScreen:
-    def __init__(self, display, font):
+    def __init__(self, display, font, settings):
         self.display = display
         self.font = font
+        self.settings = settings
         self.cursor = 0
         self.playing = False
         self._song_idx = 0
@@ -58,7 +59,7 @@ class MusicScreen:
             return phase_idx
         done = 0
         step = (freq * _WAVE_SIZE / _SAMPLE_RATE) if freq > 0 else 0.0
-        vol = _VOLUME
+        vol = self.settings.volume / 100.0
         wt = _WAVETABLE
         mask = _WAVE_SIZE - 1
         buf = self._buf

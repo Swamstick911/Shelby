@@ -98,7 +98,7 @@ gm_scr = GmailScreen(display, FONT, secrets)
 tk_scr = TaskScreen(display, FONT)
 st_scr = SettingsScreen(display, FONT, secrets, wifi_mgr)
 ht_scr = HackatimeScreen(display, FONT, secrets)
-mu_scr = MusicScreen(display, FONT)
+mu_scr = MusicScreen(display, FONT, st_scr)
 
 clock.show_menu_hint(0)
 clock.update()

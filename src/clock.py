@@ -13,6 +13,11 @@ class ClockScreen:
         self.prev_status_text = ""
         self.needs_full_redraw = True
         self.use_24h = False
+        self.weather = "CLEAR"
+        self._last_weather = "CLEAR"
+        self._particles = []
+        self._last_anim_tick = time.ticks_ms()
+        self._lightning_active = False
 
     def _color(self, r, g, b):
         return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3)
@@ -29,10 +34,20 @@ class ClockScreen:
 
     def _sky_bg(self, hour):
         h = int(hour)
+        w = self.weather
+        if w in ("CLOUDY", "FOG", "STORM"):
+            if 6 <= h < 18: return self._color(130, 140, 150)
+            else: return self._color(15, 15, 30)
+        if w in ("RAIN",):
+            if 6<= h < 18: return self._color(80, 100, 120)
+            else: return self._color(10, 10, 25)
+        if w in "SNOW":
+            if 6 <= h < 18: return self._color(190, 200, 215)
+            else: return self._color(20, 20, 45)
         if 6 <= h < 18:
-            if h < 9:  return self._color(100, 180, 255)
+            if h < 9: return self._color(100, 180, 255)
             elif h < 16: return self._color(40, 140, 255)
-            else:        return self._color(200, 100, 50)
+            else: return self._color(200, 100, 50)
         else:
             return self._color(0, 0, 40)
 
@@ -58,6 +73,36 @@ class ClockScreen:
             for y in range(-5, 6):
                 if x*x + y*y <= 25:
                     self._draw_pixel(cx+x, cy+y, yellow)
+
+    def _draw_clouds(self, bg, thick=False)
+        """Thick grey cloud bank for CLOUDY/STORM"""
+        if thick:
+            gc = self._color(140, 145, 150)
+            dc = self._color(110, 115, 120)
+            for cx, cy, w, h in [
+                (0, 10, 60, 10), (50, 6, 70, 14), (110, 12, 50, 10),
+                (20, 20, 50, 8), (80, 18, 55, 10)
+            ]:
+                self._fill_rect(cx, cy, w, h, gc)
+                self._fill_rect(cx+4,cy-4, w-8, 6, dc)
+        else:
+            white = self._color(230, 235, 240)
+            for c in [(30, 20), (120, 15), (70, 30)]:
+                self._fill_rect(c[0], c[1], 15, 6, white)
+                self._fill_rect(c[0]+3, c[1]-3, 9, 6, white)
+
+    def _init_particles(self, count):
+        """Seed rain or snow particles at pseudo random positions"""
+        self._particles = []
+        seed = time.localtime()[5] + 1
+        for i in range(count):
+            seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
+            x = (seed % self.width)
+            seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
+            y = (seed % (self.height - 25))
+            speed = 2 if self.weather == "RAIN" else 1
+            self._particles.append([x, y, speed])
+
 
     def _repaint_all(self, hour, minute, now):
         h = int(hour)
