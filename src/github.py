@@ -37,24 +37,41 @@ class GithubScreen:
         self._draw()
 
     def _fetch(self):
+        import gc
         gc.collect()
         try:
+            import urequests
             headers = {
                 "Authorization": "Bearer " + self.secrets.get("github_token", ""),
                 "User-Agent": "Sprig-Shelby"
             }
             r = urequests.get(
-                "https://api.github.com/notifications?per_page=5",
-                headers=headers
+                "https://api.github.com/notifications?per_page=3",
+                headers=headers,
+                stream=True
             )
             if r.status_code == 200:
-                data = r.json()
                 self.notifs = []
-                for n in data:
-                    title = n.get("subject", {}).get("title", "Unknown")
-                    if len(title) > 22:
-                        title = title[:21] + "~"
-                    self.notifs.append(title)
+                buf = ""
+                while len(self.notifs) < 3:
+                    chunk = r.raw.read(128)  # <-- Changed this line
+                    if not chunk:
+                        break
+                    buf += chunk.decode("utf-8", "ignore")
+                    
+                    idx = buf.find('"title":')
+                    if idx != -1:
+                        start = buf.find('"', idx + 8) + 1
+                        if start > 0:
+                            end = buf.find('"', start)
+                            if end != -1:
+                                title = buf[start:end]
+                                if len(title) > 22:
+                                    title = title[:21] + "~"
+                                self.notifs.append(title)
+                                buf = buf[end:]
+                    elif len(buf) > 256:
+                        buf = buf[-128:]
                 self.error = None
             else:
                 self.error = "HTTP " + str(r.status_code)

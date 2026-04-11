@@ -1,7 +1,6 @@
 import time
 from src.font import FONT
 
-
 class ClockScreen:
     def __init__(self, display):
         self.display = display
@@ -13,12 +12,15 @@ class ClockScreen:
         self.prev_status_text = ""
         self.needs_full_redraw = True
         self.use_24h = False
+        
+        # Weather state
         self.weather = "CLEAR"
         self._last_weather = "CLEAR"
         self._particles = []
         self._last_anim_tick = time.ticks_ms()
         self._lightning_active = False
 
+    #helpers
     def _color(self, r, g, b):
         return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3)
 
@@ -32,25 +34,29 @@ class ClockScreen:
     def _draw_text(self, text, x, y, color, scale=1):
         self.display.text((x, y), text, color, FONT, scale)
 
+    #sky bg
     def _sky_bg(self, hour):
         h = int(hour)
         w = self.weather
+        # Cloudy/fog/storm -> desaturate the sky
         if w in ("CLOUDY", "FOG", "STORM"):
             if 6 <= h < 18: return self._color(130, 140, 150)
-            else: return self._color(15, 15, 30)
+            else:            return self._color(15, 15, 30)
         if w in ("RAIN",):
-            if 6<= h < 18: return self._color(80, 100, 120)
-            else: return self._color(10, 10, 25)
-        if w in "SNOW":
+            if 6 <= h < 18: return self._color(80, 100, 120)
+            else:            return self._color(10, 10, 25)
+        if w == "SNOW":
             if 6 <= h < 18: return self._color(190, 200, 215)
-            else: return self._color(20, 20, 45)
+            else:            return self._color(20, 20, 45)
+        # CLEAR - original palette
         if 6 <= h < 18:
-            if h < 9: return self._color(100, 180, 255)
+            if h < 9:  return self._color(100, 180, 255)
             elif h < 16: return self._color(40, 140, 255)
-            else: return self._color(200, 100, 50)
+            else:        return self._color(200, 100, 50)
         else:
             return self._color(0, 0, 40)
 
+    #celestial
     def _draw_moon(self, cx, cy):
         yellow = self._color(255, 255, 100)
         bg = self._color(0, 0, 40)
@@ -74,25 +80,26 @@ class ClockScreen:
                 if x*x + y*y <= 25:
                     self._draw_pixel(cx+x, cy+y, yellow)
 
+    #weather overlays
     def _draw_clouds(self, bg, thick=False):
-        """Thick grey cloud bank for CLOUDY/STORM"""
+        """Thick grey cloud bank for CLOUDY/STORM, light wisps otherwise."""
         if thick:
             gc = self._color(140, 145, 150)
             dc = self._color(110, 115, 120)
             for cx, cy, w, h in [
-                (0, 10, 60, 10), (50, 6, 70, 14), (110, 12, 50, 10),
-                (20, 20, 50, 8), (80, 18, 55, 10)
+                (0,  10, 60, 10), (50, 6,  70, 14), (110, 12, 50, 10),
+                (20, 20, 50, 8),  (80, 18, 55, 10)
             ]:
                 self._fill_rect(cx, cy, w, h, gc)
-                self._fill_rect(cx+4,cy-4, w-8, 6, dc)
+                self._fill_rect(cx+4, cy-4, w-8, 6, dc)
         else:
-            white = self._color(255, 235, 255)
+            white = self._color(255, 255, 255)
             for c in [(30, 20), (120, 15), (70, 30)]:
                 self._fill_rect(c[0], c[1], 15, 6, white)
                 self._fill_rect(c[0]+3, c[1]-3, 9, 6, white)
 
-    def _init_particles(self, count):
-        """Seed rain or snow particles at pseudo random positions"""
+    def _init_particles(self, count=14):
+        """Seed rain/snow particles at pseudo-random positions."""
         self._particles = []
         seed = time.localtime()[5] + 1
         for i in range(count):
@@ -104,38 +111,34 @@ class ClockScreen:
             self._particles.append([x, y, speed])
 
     def _draw_rain(self, bg):
-        """Draw and advance rain streaks"""
-        blue = self._color(100, 150, 220)
+        """Draw and advance rain streaks. bg is used to erase old position."""
+        blue  = self._color(100, 150, 220)
         lblue = self._color(140, 190, 255)
         if not self._particles:
             self._init_particles(14)
-
+            
         for p in self._particles:
-            #erase old
-            self._draw_pixel(p[0], p[1], bg)
+            self._draw_pixel(p[0], p[1],   bg)
             self._draw_pixel(p[0], p[1]+1, bg)
             self._draw_pixel(p[0], p[1]+2, bg)
-            #advance
             p[1] += p[2]
             if p[1] >= self.height - 25:
                 p[1] = 0
                 p[0] = (p[0] * 1103515245 + 12345) & 0x7FFFFFFF
                 p[0] = p[0] % self.width
-            #draw new
-            self._draw_pixel(p[0], p[1], lblue)
+            self._draw_pixel(p[0], p[1],   lblue)
             self._draw_pixel(p[0], p[1]+1, blue)
             self._draw_pixel(p[0], p[1]+2, blue)
-        
+
     def _draw_snow(self, bg):
-        """Draw and advance snow flakes"""
+        """Draw and advance snow flakes."""
         white = self._color(240, 245, 255)
         if not self._particles:
             self._init_particles(10)
-        
+            
         for p in self._particles:
             self._draw_pixel(p[0], p[1], bg)
             p[1] += 1
-            #slight horizontal drift using motion
             drift = ((p[0] * 17 + p[1]) % 3) - 1
             p[0] = max(0, min(self.width-1, p[0] + drift))
             if p[1] >= self.height - 25:
@@ -145,42 +148,40 @@ class ClockScreen:
             self._draw_pixel(p[0], p[1], white)
 
     def _draw_fog(self, bg):
-        """Horizontal semi transparent fog bands"""
+        """Horizontal semi-transparent fog bands."""
         fog = self._color(200, 205, 210)
         for y in range(8, 40, 6):
             self._fill_rect(0, y, self.width, 2, fog)
 
-    def _draw_lightning(self, bg):
-        """Draws a zigzag flash"""
+    def _draw_lightning(self):
+        """Draws a zigzag flash."""
         flash = self._color(255, 255, 180)
         pts = [(80,5),(75,15),(82,15),(72,30),(85,30),(70,45)]
-        for i in range(len(pts) - 1):
-            x1,y1  = pts[i]; x2,y2 = pts[i+1]
+        for i in range(len(pts)-1):
+            x1,y1 = pts[i]; x2,y2 = pts[i+1]
             steps = max(abs(x2-x1), abs(y2-y1))
             if steps:
-                for s in range(steps):
+                for s in range(steps + 1):
                     xi = x1 + (x2-x1)*s//steps
                     yi = y1 + (y2-y1)*s//steps
                     self._draw_pixel(xi, yi, flash)
 
+    #main repaint
     def _repaint_all(self, hour, minute, now):
         h = int(hour)
         is_day = 6 <= h < 18
         bg = self._sky_bg(hour)
         w = self.weather
 
-        # fill ENTIRE screen with sky color
         self._fill_rect(0, 0, self.width, self.height, bg)
 
-        # celestial arc
         mins = (h - 6) * 60 + minute if is_day else ((h + 6) % 24) * 60 + minute
         progress = mins / 720.0
         cx = int(progress * 160)
         cy = int(8 + ((cx - 80) ** 2) / 80)
 
-        # Draw sun/moon and static weather elements based on condition
         if w == "CLEAR":
-            if is_day:
+            if is_day: 
                 self._draw_sun(cx, cy)
                 self._draw_clouds(bg, thick=False)
             else:
@@ -188,31 +189,25 @@ class ClockScreen:
                 white = self._color(255, 255, 255)
                 for sx, sy in [(20,15),(40,30),(80,10),(130,25),(150,5),(90,35)]:
                     self._draw_pixel(sx, sy, white)
-
         elif w == "CLOUDY":
             if is_day: self._draw_sun(cx, cy)
             else:      self._draw_moon(cx, cy)
             self._draw_clouds(bg, thick=True)
-
         elif w == "STORM":
             self._draw_clouds(bg, thick=True)
-
         elif w == "FOG":
             if is_day: self._draw_sun(cx, cy)
             else:      self._draw_moon(cx, cy)
             self._draw_fog(bg)
-
         elif w == "RAIN":
             self._draw_clouds(bg, thick=True)
             if not self._particles:
                 self._init_particles(14)
-
         elif w == "SNOW":
             self._draw_clouds(bg, thick=False)
             if not self._particles:
                 self._init_particles(10)
 
-        # draw ALL text on top
         time_col = self._color(255, 255, 255)
         date_col = self._color(220, 255, 220) if is_day else self._color(180, 200, 255)
 
@@ -236,32 +231,18 @@ class ClockScreen:
         date_x = (self.width - date_w) // 2
         self._draw_text(date_str, date_x, 82, date_col, scale=2)
 
-        # Weather label bottom-left
         if w != "CLEAR":
-            label_map = {
-                "CLOUDY": "Cloudy", "RAIN": "Rain", "SNOW": "Snow",
-                "STORM": "Storm",  "FOG":  "Fog"
-            }
+            label_map = {"CLOUDY": "Cloudy", "RAIN": "Rain", "SNOW": "Snow", "STORM": "Storm", "FOG": "Fog"}
             wlabel = label_map.get(w, "")
             self._draw_text(wlabel, 3, 112, self._color(200, 220, 255), scale=1)
 
-        # draw status bar
         stat_col = self._color(255, 255, 100)
         stat_w = len(self.status_text) * 6
         stat_x = (self.width - stat_w) // 2
-        self._draw_text_on_bg(self.status_text, stat_x, 112, stat_col, bg)
+        self._draw_text_on_bg(self.status_text, stat_x, 118, stat_col, bg)
         self.prev_status_text = self.status_text
 
-    def _draw_status(self, hour):
-        # Clear just status row with exact sky color, then draw text
-        bg = self._sky_bg(hour)
-        self._fill_rect(0, 115, self.width, 13, bg)
-        stat_col = self._color(255, 255, 100)
-        stat_w = len(self.status_text) * 6
-        stat_x = (self.width - stat_w) // 2
-        self._draw_text(self.status_text, stat_x, 118, stat_col, scale=1)
-        self.prev_status_text = self.status_text
-
+    #per-tick update
     def update(self):
         now    = time.localtime()
         sec    = now[5]
@@ -269,18 +250,15 @@ class ClockScreen:
         minute = now[4]
         w      = self.weather
 
-        # 1. Handle Weather Condition Changes
         if self._last_weather != w:
             self._particles = []
             self._last_weather = w
             self.needs_full_redraw = True
 
-        # 2. Clear lightning leftovers from previous second
         if self._lightning_active and sec % 7 != 0:
             self.needs_full_redraw = True
             self._lightning_active = False
 
-        # 3. Particle Animation Engine (runs ~10 FPS decoupled from seconds)
         anim_tick = False
         current_ms = time.ticks_ms()
         if time.ticks_diff(current_ms, self._last_anim_tick) > 100:
@@ -288,7 +266,6 @@ class ClockScreen:
             anim_tick = True
 
         if sec == self.last_sec and not self.needs_full_redraw:
-            # Advance particles smoothly between full second ticks
             if anim_tick and w in ("RAIN", "SNOW") and self._particles:
                 bg = self._sky_bg(hour)
                 if w == "RAIN":  self._draw_rain(bg)
@@ -297,23 +274,21 @@ class ClockScreen:
 
         self.last_sec = sec
 
-        # 4. Handle Redraws
         if minute != self.prev_minute or self.needs_full_redraw:
             self.prev_minute = minute
             self._repaint_all(hour, minute, now)
             self.needs_full_redraw = False
         else:
-            # Same minute, different second -> handle per-second logic (like lightning)
             if w == "STORM" and sec % 7 == 0:
                 self._draw_lightning()
                 self._lightning_active = True
                 
-            # If a second ticked but particles didn't get their anim_tick yet, force draw them so they don't skip
             if w in ("RAIN", "SNOW") and self._particles:
                 bg = self._sky_bg(hour)
                 if w == "RAIN":   self._draw_rain(bg)
                 elif w == "SNOW": self._draw_snow(bg)
 
+    #status / menu hint
     def show_menu_hint(self, index, gh_count=0, mail_count=0):
         menus = ["Clock", "GitHub", "Gmail", "Tasks"]
         if index == 0:
@@ -323,20 +298,16 @@ class ClockScreen:
             self.status_text = " | ".join(badges) if badges else "All caught up!"
         else:
             self.status_text = f"-> {menus[index]} (D)"
-
         self.needs_full_redraw = True
         self.last_sec = -1
 
     def _draw_char_on_bg(self, ch, x, y, fg, bg):
-        #draw a single character with explicit background color at scale=1
         ci = ord(ch)
-        if not (FONT["Start"] <= ci <= FONT["End"]):
-            return
+        if not (FONT["Start"] <= ci <= FONT["End"]): return
         fontw = FONT["Width"]
         fonth = FONT["Height"]
         ci = (ci - FONT["Start"]) * fontw
         charA = FONT["Data"][ci:ci + fontw]
-
         for col in range(fontw):
             c = charA[col]
             for row in range(fonth):
@@ -345,7 +316,6 @@ class ClockScreen:
                 c >>= 1
 
     def _draw_text_on_bg(self, text, x, y, fg, bg):
-        """Draw text with explicit background color at scale=1"""
         px = x
         for ch in text:
             self._draw_char_on_bg(ch, px, y, fg, bg)

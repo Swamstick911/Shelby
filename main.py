@@ -3,6 +3,8 @@ import time
 from machine import Pin, SPI
 import st7735
 from src.font import FONT
+import gc
+import urequests
 
 
 # 1. Display init FIRST
@@ -90,6 +92,7 @@ from src.tasks    import TaskScreen
 from src.settings import SettingsScreen
 from src.hackatime import HackatimeScreen
 from src.music import MusicScreen
+from src.weather import WeatherManager 
 
 clock = ClockScreen(display)
 menu_scr = MenuScreen(display, FONT)
@@ -99,6 +102,11 @@ tk_scr = TaskScreen(display, FONT)
 st_scr = SettingsScreen(display, FONT, secrets, wifi_mgr)
 ht_scr = HackatimeScreen(display, FONT, secrets)
 mu_scr = MusicScreen(display, FONT, st_scr)
+weather_mgr = WeatherManager(secrets)
+
+if wifi_connected:
+    weather_mgr.update()
+    clock.weather = weather_mgr.condition
 
 clock.show_menu_hint(0)
 clock.update()
@@ -106,7 +114,8 @@ clock.update()
 
 # 6. Navigation state
 current_view   = "Clock"
-last_api_fetch = time.ticks_ms()
+last_gh_fetch = time.ticks_ms() - 300000
+last_we_fetch = time.ticks_ms()
 gh_count       = 0
 mail_count     = 0
 
@@ -122,27 +131,59 @@ while True:
         clock.update()
 
     # Background GitHub fetch every 5 min
-    if wifi_connected and time.ticks_diff(time.ticks_ms(), last_api_fetch) > 300000:
+        # Background GitHub fetch every 5 min
+        # Background GitHub fetch every 5 min
+        # Background GitHub fetch every 5 min
+        # Background GitHub fetch every 5 min
+    if wifi_connected and time.ticks_diff(time.ticks_ms(), last_gh_fetch) > 300000:
+        gc.collect()
         try:
-            import urequests, gc
-            gc.collect()
             headers = {
                 "Authorization": f"Bearer {secrets.get('github_token', '')}",
                 "User-Agent": "Sprig-Shelby"
             }
+            # Stream the response instead of loading it all at once
             r = urequests.get(
                 "https://api.github.com/notifications?per_page=5",
-                headers=headers
+                headers=headers,
+                stream=True  # Important: Tells urequests not to buffer the whole thing
             )
+            
             if r.status_code == 200:
-                gh_count = len(r.json())
+                gh_count = 0
+                while True:
+                    # Read exactly 256 bytes at a time
+                    chunk = r.raw.read(256)
+                    if not chunk:
+                        break
+                    # Count in this tiny chunk, then throw it away
+                    gh_count += chunk.decode("utf-8", "ignore").count('"id":')
+                    del chunk
+            
             r.close()
-            gc.collect()
+            del r
+            
         except Exception as e:
-            print(f"API refresh failed: {e}")
-        last_api_fetch = time.ticks_ms()
+            print(f"GH refresh failed: {e}")
+            
+        gc.collect()
+        last_gh_fetch = time.ticks_ms()
         if current_view == "Clock":
             clock.show_menu_hint(0, gh_count, mail_count)
+
+    # Background Weather fetch (WeatherManager internally limits to 15 min)
+    # We check it every 60 seconds here so it doesn't run in the exact same loop as GitHub
+    if wifi_connected and time.ticks_diff(time.ticks_ms(), last_we_fetch) > 60000:
+        import gc
+        gc.collect()
+        changed = weather_mgr.update()
+        if changed:
+            clock.weather = weather_mgr.condition
+            clock._particles = []          
+            clock.needs_full_redraw = True
+        
+        gc.collect()
+        last_we_fetch = time.ticks_ms()
 
     #J button
     if btns["J"].pressed():
@@ -167,7 +208,7 @@ while True:
         if btns["L"].pressed():
             current_view = "Menu"
             menu_scr.show()
-
+        
     elif current_view == "Menu":
         result = menu_scr.handle_input(btns)
         if result == "github":
