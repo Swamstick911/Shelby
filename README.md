@@ -47,7 +47,7 @@ mpremote connect list
 ```
 Then whatever your COM number for the sprig is example COM7, enter this
 ```bash
-mpremote connect COM7 mount . run main.py
+mpremote connect COM7 cp -r . :
 ```
 And you're done! Enjoy your Sprig running Shelby!!
 
