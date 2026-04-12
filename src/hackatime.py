@@ -15,10 +15,11 @@ GREY = _c(120, 120, 120)
 TITLE_BG = _c(10, 10, 30)
 
 class HackatimeScreen:
-    def __init__(self, display, font, secrets):
+    def __init__(self, display, font, secrets, wdt=None):  # <--- Accept wdt
         self.display = display
         self.font = font
         self.secrets = secrets
+        self.wdt = wdt                                     # <--- Store it
         self.stats = []
         self.today = "-"
         self.week = "-"
@@ -40,12 +41,7 @@ class HackatimeScreen:
         self.error = None
         self.today = "-"
         self.week = "-"
-
-        # Safely grab the global Watchdog so we can pet it
-        import sys
-        wdt = None
-        if "wdt" in sys.modules.get('__main__').__dict__:
-            wdt = sys.modules.get('__main__').wdt
+        wdt = self.wdt  # <--- Use the stored watchdog
 
         uid = self.secrets.get("hackatime_uid", "")
         projects = self.secrets.get("hackatime_projects", [])
@@ -121,6 +117,7 @@ class HackatimeScreen:
             gc.collect()
 
         # --- PROJECTS (BADGES) ---
+                # --- PROJECTS (BADGES) ---
         if not uid or not projects:
             return
 
@@ -140,6 +137,10 @@ class HackatimeScreen:
                         chunk = r.raw.read(128)
                         if not chunk: break
                         buf += chunk.decode("utf-8", "ignore")
+                        
+                        # THE FIX: Prevent buffer from growing infinitely and crashing RAM!
+                        if len(buf) > 512:
+                            buf = buf[-256:]
                     
                     last_text_start = buf.rfind("<text")
                     if last_text_start != -1:

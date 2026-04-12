@@ -1,5 +1,5 @@
 import st7735
-from src.icons import draw_github, draw_games, draw_tasks, draw_settings, draw_hackatime, draw_music
+from src.icons import draw_github, draw_system, draw_tasks, draw_settings, draw_hackatime, draw_music
 
 
 def _c(r, g, b):
@@ -39,7 +39,7 @@ CARD_H = (GRID_H - PADDING * (ROWS - 1)) // ROWS
 
 APPS = [
     {"id": "github",    "label": "GitHub",    "draw": draw_github},
-    {"id": "games",     "label": "Games",     "draw": draw_games},
+    {"id": "system",    "label": "System",    "draw": draw_system},
     {"id": "tasks",     "label": "Tasks",     "draw": draw_tasks},
     {"id": "hackatime", "label": "Hakatime",  "draw": draw_hackatime},
     {"id": "settings",  "label": "Settings",  "draw": draw_settings},

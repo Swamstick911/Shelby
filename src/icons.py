@@ -99,22 +99,26 @@ def draw_music(display, x, y, color):
     display.line((x+10, y+8),  (x+16, y+11), color)  # flag bottom curve
     display.line((x+16, y+7),  (x+16, y+11), color)  # flag right edge
 
-def draw_games(display, x, y, color):
-    """Gamepad icon"""
-    #Outer controller body
-    display.line((x+2, y+6), (x+22, y+6), color)
-    display.line((x+2, y+18), (x+22, y+18), color)
-    display.line((x+2, y+6), (x+2, y+18), color)
-    display.line((x+22, y+6), (x+22, y+18), color)
-
-    #Left side
-    display.fillrect((x+6, y+11), (4, 2), color)
-    display.fillrect((x+7, y+10), (2, 4), color)
-
-    #right side
-    display.fillrect((x+15, y+13), (2, 2), color)
-    display.fillrect((x+18, y+10), (2, 2), color)
-
-    #Middle
-    display.line((x+11, y+16), (x+13, y+14), color)
-    display.line((x+8, y+16), (x+10, y+14), color)
+def draw_system(display, x, y, color):
+    """CPU/System monitor icon"""
+    #Chip outline
+    display.line((x+4, y+4), (x+20, y+4), color) #top
+    display.line((x+4, y+20), (x+20, y+20), color) #bottom
+    display.line((x+4, y+4), (x+4, y+20), color) #left
+    display.line((x+20, y+4), (x+20, y+20), color) #right
+    #Inner core
+    display.line((x+9, y+9), (6, 6), color)
+    #top and bottom pins
+    display.line((x+7, y+2), (x+7, y+4), color)
+    display.line((x+12, y+2), (x+12, y+4), color)
+    display.line((x+17, y+2), (x+17, y+4), color)
+    display.line((x+7, y+20), (x+7, y+22), color)
+    display.line((x+12, y+20), (x+12, y+22), color)
+    display.line((x+17, y+20), (x+17, y+22), color)
+    #left and right pins
+    display.line((x+2, y+7), (x+4, y+7), color)
+    display.line((x+2, y+12), (x+4, y+12), color)
+    display.line((x+2, y+17), (x+4, y+17), color)
+    display.line((x+20, y+7), (x+22, y+7), color)
+    display.line((x+20, y+12), (x+22, y+12), color)
+    display.line((x+20, y+17), (x+22, y+17), color)

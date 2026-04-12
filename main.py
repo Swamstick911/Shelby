@@ -1,11 +1,11 @@
 import machine
 import time
 import gc
+import sys
 import urequests
 from machine import Pin, SPI, WDT
 import st7735
 from src.font import FONT
-
 
 # 1. Display init FIRST
 spi = SPI(0, baudrate=8000000, polarity=0, phase=0,
@@ -16,7 +16,6 @@ display.rgb(False)
 display.rotation(1)
 display.fill(st7735.TFT.BLACK)
 
-
 # 2. Buttons
 BUTTON_W = Pin(5,  Pin.IN, Pin.PULL_UP)
 BUTTON_A = Pin(6,  Pin.IN, Pin.PULL_UP)
@@ -26,7 +25,6 @@ BUTTON_I = Pin(12, Pin.IN, Pin.PULL_UP)
 BUTTON_J = Pin(13, Pin.IN, Pin.PULL_UP)
 BUTTON_K = Pin(14, Pin.IN, Pin.PULL_UP)
 BUTTON_L = Pin(15, Pin.IN, Pin.PULL_UP)
-
 
 class Button:
     def __init__(self, pin):
@@ -40,14 +38,12 @@ class Button:
     def pressed(self):
         return self._pressed
 
-
 btns = {
     "W": Button(BUTTON_W), "A": Button(BUTTON_A),
     "S": Button(BUTTON_S), "D": Button(BUTTON_D),
     "I": Button(BUTTON_I), "J": Button(BUTTON_J),
     "K": Button(BUTTON_K), "L": Button(BUTTON_L),
 }
-
 
 # 3. Secrets
 try:
@@ -57,7 +53,6 @@ except ImportError:
     display.text((10, 50), "secrets.py", st7735.TFT.WHITE, FONT, 1)
     display.text((10, 62), "not found!", st7735.TFT.WHITE, FONT, 1)
     while True: time.sleep(1)
-
 
 # 4. WiFi + NTP
 wifi_connected = False
@@ -76,32 +71,21 @@ try:
     else:
         display.fill(st7735.TFT.BLACK)
         display.text((10, 50), "WiFi failed.",  st7735.TFT.RED, FONT, 1)
-        display.text((10, 62), "Offline mode.", st7735.TFT.RED, FONT, 1)
         time.sleep(2)
 except Exception as e:
     print(f"WiFi error: {e}")
     wifi_connected = False
 
-
-# 5. All screens
-from src.clock    import ClockScreen
-from src.menu     import MenuScreen
-from src.github   import GithubScreen
-from src.games    import GamesScreen
-from src.tasks    import TaskScreen
-from src.settings import SettingsScreen
-from src.hackatime import HackatimeScreen
-from src.music import MusicScreen
+# 5. Core Screens (Always loaded)
+from src.clock   import ClockScreen
+from src.menu    import MenuScreen
 from src.weather import WeatherManager 
+
+print("Shelby OS started.")
+wdt = WDT(timeout=8000)
 
 clock = ClockScreen(display)
 menu_scr = MenuScreen(display, FONT)
-gh_scr = GithubScreen(display, FONT, secrets)
-games_scr = GamesScreen(display, FONT)
-tk_scr = TaskScreen(display, FONT)
-st_scr = SettingsScreen(display, FONT, secrets, wifi_mgr)
-ht_scr = HackatimeScreen(display, FONT, secrets)
-mu_scr = MusicScreen(display, FONT, st_scr)
 weather_mgr = WeatherManager(secrets)
 
 if wifi_connected:
@@ -111,17 +95,41 @@ if wifi_connected:
 clock.show_menu_hint(0)
 clock.update()
 
-
 # 6. Navigation state
 current_view  = "Clock"
+active_app    = None    # <-- Holds the dynamically loaded app
 last_gh_fetch = time.ticks_ms() - 300000
 last_we_fetch = time.ticks_ms()
 gh_count      = 0
 
-print("Shelby OS started.")
 
-# Hardware Watchdog - Will reboot the Pico if the loop hangs for 8 seconds
-wdt = WDT(timeout=8000)
+# --- HELPER: LAZY LOAD AN APP ---
+def load_app(module_name, class_name, *args):
+    """Dynamically imports an app module, instantiates it, and returns the object."""
+    gc.collect()
+    print(f"Loading {module_name}...")
+    mod = __import__(f"src.{module_name}", None, None, [class_name])
+    app_class = getattr(mod, class_name)
+    app = app_class(*args)
+    app.show()
+    return app
+
+# --- HELPER: UNLOAD AN APP ---
+def unload_app():
+    """Destroys the current app and forcefully removes it from RAM."""
+    global active_app
+    active_app = None
+    
+    # Identify modules that aren't core and delete them from sys.modules
+    core_modules = ["sys", "gc", "machine", "time", "urequests", "st7735", 
+                    "src.font", "src.clock", "src.menu", "src.weather", "src.wifi_manager", "secrets"]
+    
+    for mod_name in list(sys.modules.keys()):
+        if mod_name not in core_modules and not mod_name.startswith("src.utils") and not mod_name.startswith("src.icons"):
+            del sys.modules[mod_name]
+            
+    gc.collect()  # Nuke the dead app from RAM immediately!
+
 
 # 7. Main loop
 while True:
@@ -133,58 +141,35 @@ while True:
     if current_view == "Clock":
         clock.update()
 
-    # Background GitHub fetch every 5 min
-        # Background GitHub fetch every 5 min
+    # Background GitHub fetch
     if wifi_connected and time.ticks_diff(time.ticks_ms(), last_gh_fetch) > 300000:
         gc.collect()
         try:
-            headers = {
-                "Authorization": f"Bearer {secrets.get('github_token', '')}",
-                "User-Agent": "Sprig-Shelby"
-            }
-            # Add timeout to prevent socket hangs
-            r = urequests.get(
-                "https://api.github.com/notifications?per_page=5",
-                headers=headers,
-                stream=True,
-                timeout=5
-            )
-            
+            headers = {"Authorization": f"Bearer {secrets.get('github_token', '')}", "User-Agent": "Sprig-Shelby"}
+            r = urequests.get("https://api.github.com/notifications?per_page=5", headers=headers, stream=True, timeout=5)
             if r.status_code == 200:
                 gh_count = 0
                 while True:
-                    wdt.feed() # Keep watchdog happy during slow downloads
-                    chunk = r.raw.read(128) # Dropped from 256 to 128 bytes to save even more RAM
-                    if not chunk:
-                        break
+                    wdt.feed()
+                    chunk = r.raw.read(128)
+                    if not chunk: break
                     gh_count += chunk.decode("utf-8", "ignore").count('"id":')
-                    del chunk
-            
-            # The critical memory fix: explicitly close the raw socket AND the response
-            try:
-                r.raw.close()
-            except:
-                pass
+            try: r.raw.close()
+            except: pass
             r.close()
-            del r
-            
-        except Exception as e:
-            print(f"Badge fetch error: {e}")
-            
+        except: pass
         gc.collect()
         last_gh_fetch = time.ticks_ms()
         if current_view == "Clock":
             clock.show_menu_hint(0, gh_count, 0)
 
-    # Background Weather fetch every 60 seconds (Manager enforces 15m API limit internally)
+    # Background Weather fetch
     if wifi_connected and time.ticks_diff(time.ticks_ms(), last_we_fetch) > 60000:
         gc.collect()
-        changed = weather_mgr.update()
-        if changed:
+        if weather_mgr.update():
             clock.weather = weather_mgr.condition
             clock._particles = []          
             clock.needs_full_redraw = True
-        
         gc.collect()
         last_we_fetch = time.ticks_ms()
 
@@ -196,10 +181,10 @@ while True:
             clock.needs_full_redraw = True
             clock.show_menu_hint(0, gh_count, 0)
             clock.update()
-        elif current_view in ["Settings", "GitHub", "Games", "Tasks", "Hackatime", "Music"]:
-            pass # Active screen handles J itself
+        elif current_view not in ["Clock", "Menu"]:
+            pass # Active app handles J itself
 
-    # Per-screen input
+    # --- PER-SCREEN INPUT ---
     if current_view == "Clock":
         if btns["L"].pressed():
             current_view = "Menu"
@@ -207,73 +192,45 @@ while True:
         
     elif current_view == "Menu":
         result = menu_scr.handle_input(btns)
-        if result == "github":
-            if not wifi_connected:
-                current_view = "Menu"
-            else:
-                current_view = "GitHub"
-                gh_scr.show()
-
-        elif result == "games":
-            if not wifi_connected:
-                current_view = "Menu"
-            else:
-                current_view = "Games"
-                games_scr.show()
-
+        
+        if result == "github" and wifi_connected:
+            current_view = "GitHub"
+            active_app = load_app("github", "GithubScreen", display, FONT, secrets)
+            
+        elif result == "games" and wifi_connected:
+            current_view = "Games"
+            active_app = load_app("games", "GamesScreen", display, FONT)
+            
         elif result == "tasks":
             current_view = "Tasks"
-            tk_scr.show()
-
+            active_app = load_app("tasks", "TaskScreen", display, FONT)
+            
         elif result == "settings":
             current_view = "Settings"
-            st_scr.show()
-        
+            active_app = load_app("settings", "SettingsScreen", display, FONT, secrets, wifi_mgr)
+            
         elif result == "hackatime":
             current_view = "Hackatime"
-            ht_scr.show()
-        
+            active_app = load_app("hackatime", "HackatimeScreen", display, FONT, secrets, wdt)
+            
         elif result == "music":
             current_view = "Music"
-            mu_scr.show()
+            # We must load settings first temporarily if music depends on it, or update music.py
+            # For now, if Music requires st_scr, we create a dummy one or adapt it.
+            active_app = load_app("music", "MusicScreen", display, FONT, None)
 
-    # Active screen input handling
-    elif current_view == "GitHub":
-        result = gh_scr.handle_input(btns)
+    # --- ACTIVE APP INPUT HANDLING ---
+    elif active_app is not None:
+        result = active_app.handle_input(btns)
+        
         if result == "menu":
-            current_view = "Menu"
-            menu_scr.show()
-
-    elif current_view == "Games":
-        result = games_scr.handle_input(btns)
-        if result == "menu":
-            current_view = "Menu"
-            menu_scr.show()
-
-    elif current_view == "Tasks":
-        result = tk_scr.handle_input(btns)
-        if result == "menu":
-            current_view = "Menu"
-            menu_scr.show()
-
-    elif current_view == "Settings":
-        result = st_scr.handle_input(btns)
-        if result == "menu":
-            clock.use_24h = st_scr.use_24h
-            clock.needs_full_redraw = True
-            clock.last_sec = -1
-            current_view = "Menu"
-            menu_scr.show()
-
-    elif current_view == "Hackatime":
-        result = ht_scr.handle_input(btns)
-        if result == "menu":
-            current_view = "Menu"
-            menu_scr.show()
-
-    elif current_view == "Music":
-        result = mu_scr.handle_input(btns)
-        if result == "menu":
+            # If we were in settings, apply the 24h change before closing
+            if current_view == "Settings" and hasattr(active_app, "use_24h"):
+                clock.use_24h = active_app.use_24h
+                clock.needs_full_redraw = True
+                clock.last_sec = -1
+                
+            unload_app() # FREE ALL THE RAM
             current_view = "Menu"
             menu_scr.show()
 
