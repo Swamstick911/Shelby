@@ -116,29 +116,56 @@ class HackatimeScreen:
                 print("Today stats error:", e)
             gc.collect()
 
-        # --- PROJECTS (BADGES) ---
                 # --- PROJECTS (BADGES) ---
-        if not uid or not projects:
+        username = self.secrets.get("hackatime_username", "")
+        
+        if not uid or not username or not projects:
             return
 
-        base_badge = "https://hackatime.hackclub.com/api/badge/"
+        base_badge = "https://hackatime.hackclub.com/api/v1/badge/"
+        
         for label, slug in projects:
             gc.collect()
             if wdt: wdt.feed()
             try:
-                url = base_badge + uid + "/project/" + slug
-                r = urequests.get(url, stream=True, timeout=5)
+                url = base_badge + uid + "/" + username + "/" + slug
+                headers_badge = {"User-Agent": "Sprig-Shelby"}
                 
+                # Fetch the initial URL
+                r = urequests.get(url, headers=headers_badge, stream=True, timeout=5)
+                
+                # If Hackatime tells us to look elsewhere (301, 302, 307, 308)
+                if r.status_code in [301, 302, 307, 308]:
+                    # Extract the new URL from the Location header
+                    # Note: urequests sometimes lowercases headers, sometimes not
+                    redirect_url = ""
+                    for k, v in r.headers.items():
+                        if k.lower() == "location":
+                            redirect_url = v
+                            break
+                            
+                    # Close the old connection immediately
+                    try: r.raw.close()
+                    except: pass
+                    r.close()
+                    del r
+                    gc.collect()
+                    
+                    if redirect_url:
+                        # Follow the redirect!
+                        if wdt: wdt.feed()
+                        r = urequests.get(redirect_url, headers=headers_badge, stream=True, timeout=5)
+                
+                # Now process the actual SVG data (either from a 200 or the redirect 200)
                 if r.status_code == 200:
                     buf = ""
                     time_str = "0h 0m"
                     while True:
-                        if wdt: wdt.feed() # Pet watchdog!
+                        if wdt: wdt.feed()
                         chunk = r.raw.read(128)
                         if not chunk: break
                         buf += chunk.decode("utf-8", "ignore")
                         
-                        # THE FIX: Prevent buffer from growing infinitely and crashing RAM!
                         if len(buf) > 512:
                             buf = buf[-256:]
                     
@@ -148,15 +175,19 @@ class HackatimeScreen:
                         val_end = buf.find("</text>", val_start)
                         if val_end != -1:
                             time_str = buf[val_start:val_end].strip()
-                    
+                            if time_str.startswith("hackatime:"):
+                                time_str = time_str[10:].strip()
+                                
                     self.stats.append((label, time_str))
                 else:
+                    print(f"Badge {slug} HTTP {r.status_code}")
                     self.stats.append((label, "err"))
                     
                 try: r.raw.close()
                 except: pass
                 r.close()
                 del r
+                
             except Exception as e:
                 print("Badge error:", e)
                 self.stats.append((label, "-"))

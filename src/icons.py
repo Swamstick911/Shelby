@@ -107,7 +107,10 @@ def draw_system(display, x, y, color):
     display.line((x+4, y+4), (x+4, y+20), color) #left
     display.line((x+20, y+4), (x+20, y+20), color) #right
     #Inner core
-    display.line((x+9, y+9), (6, 6), color)
+    display.line((x+9, y+9), (x+15, y+9), color)   # top
+    display.line((x+9, y+15), (x+15, y+15), color) # bottom
+    display.line((x+9, y+9), (x+9, y+15), color)   # left
+    display.line((x+15, y+9), (x+15, y+15), color) # right
     #top and bottom pins
     display.line((x+7, y+2), (x+7, y+4), color)
     display.line((x+12, y+2), (x+12, y+4), color)

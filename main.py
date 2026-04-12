@@ -197,9 +197,9 @@ while True:
             current_view = "GitHub"
             active_app = load_app("github", "GithubScreen", display, FONT, secrets)
             
-        elif result == "games" and wifi_connected:
-            current_view = "Games"
-            active_app = load_app("games", "GamesScreen", display, FONT)
+        elif result == "system":
+            current_view = "System"
+            active_app = load_app("system", "SystemScreen", display, FONT)
             
         elif result == "tasks":
             current_view = "Tasks"
