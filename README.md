@@ -1,8 +1,10 @@
 # Shelby 
+
 Shelby is a firmware designed specifically for the Sprig by hackclub that turns it into a mini desk companion
 ---
 
 # What actually is this??
+
 Shelby turns your Sprig from a gaming console into a device with fully working operating system that has all the important things on your finger tips! Your github contributions, they are there, your hackatime stats they are also there! and many other things on that small device
 ---
 
