@@ -1,6 +1,8 @@
 # Shelby 
 
 Shelby is a firmware designed specifically for the Sprig by hackclub that turns it into a mini desk companion
+
+[Watch the demo video!](https://github.com/user-attachments/assets/a62c12d5-ae85-4c19-9b54-42e6baf9ffeb)
 ---
 
 # What actually is this??
@@ -27,11 +29,9 @@ Just get a Sprig from Hackclub which they send out for free, apply for one [here
 
 # Setup
 
-1. Clone the repo
-```bash
-git clone https://github.com/Swamstick911/Shelby
-cd Shelby
-```
+**1. Download the OS**
+Download the latest `.zip` release from the [Releases Page](https://github.com/Swamstick911/Shelby/releases/tag/v1.0.0). 
+Extract the `.zip` folder, open your terminal, and `cd` into that extracted folder.
 
 2. Create your `secrets.py` file
 Create a new file in the folder and name it `secrets.py` and copy the `secrets.py.example` and fill in all your credentials
