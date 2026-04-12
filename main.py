@@ -82,7 +82,6 @@ from src.menu    import MenuScreen
 
 print("Shelby OS started.")
 
-# WDT DISABLED FOR TESTING
 wdt = None
 
 clock = ClockScreen(display)
@@ -97,7 +96,7 @@ active_app    = None
 last_gh_fetch = time.ticks_ms() - 300000
 gh_count      = 0
 
-# --- HELPER: LAZY LOAD AN APP ---
+#HELPER: LAZY LOAD AN APP
 def load_app(module_name, class_name, *args):
     gc.collect()
     print(f"Loading {module_name}...")
@@ -111,7 +110,6 @@ def load_app(module_name, class_name, *args):
         print(f"Failed to load {module_name}: {e}")
         return None
 
-# --- HELPER: UNLOAD AN APP ---
 def unload_app():
     global active_app
     active_app = None
@@ -147,7 +145,7 @@ while True:
         elif current_view not in ["Clock", "Menu"]:
             pass 
 
-    # --- PER-SCREEN INPUT ---
+    #Per screen handling
     if current_view == "Clock":
         if btns["L"].pressed():
             current_view = "Menu"
@@ -184,7 +182,7 @@ while True:
             current_view = "Menu"
             menu_scr.show()
 
-    # --- ACTIVE APP INPUT HANDLING ---
+    #app input handling
     elif active_app is not None:
         result = active_app.handle_input(btns)
         

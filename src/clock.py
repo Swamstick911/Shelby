@@ -30,7 +30,6 @@ class ClockScreen:
     # sky bg
     def _sky_bg(self, hour):
         h = int(hour)
-        # CLEAR - original palette
         if 6 <= h < 18:
             if h < 9:    return self._color(100, 180, 255)
             elif h < 16: return self._color(40, 140, 255)
