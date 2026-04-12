@@ -8,10 +8,8 @@ import micropython
 from machine import I2S, Pin, SPI
 from src.songs import SONGS
 
-
 def _c(r, g, b):
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-
 
 BG = st7735.TFT.BLACK
 WHITE = st7735.TFT.WHITE
@@ -26,7 +24,6 @@ _I2S_BCLK = 10
 _I2S_LRCLK = 11
 _I2S_DATA = 9
 _SAMPLE_RATE = 11025
-_VOLUME = 0.5
 _CHUNK = 512
 
 # Pre-computed wavetable
@@ -36,9 +33,9 @@ _WAVETABLE = array.array('h', [
     for i in range(_WAVE_SIZE)
 ])
 
-
 class MusicScreen:
-    def __init__(self, display, font, settings):
+    # Made settings optional just in case it's not passed
+    def __init__(self, display, font, settings=None):
         self.display = display
         self.font = font
         self.settings = settings
@@ -59,7 +56,14 @@ class MusicScreen:
             return phase_idx
         done = 0
         step = (freq * _WAVE_SIZE / _SAMPLE_RATE) if freq > 0 else 0.0
-        vol = self.settings.volume / 100.0
+        
+        # --- FIX: Safe Volume Check ---
+        if self.settings and hasattr(self.settings, "volume"):
+            vol = self.settings.volume / 100.0
+        else:
+            vol = 0.5  # Default to 50% volume if no settings are provided
+        # ------------------------------
+        
         wt = _WAVETABLE
         mask = _WAVE_SIZE - 1
         buf = self._buf
@@ -74,7 +78,7 @@ class MusicScreen:
                     if phase_idx >= _WAVE_SIZE:
                         phase_idx -= _WAVE_SIZE
             else:
-                #silence, zero the buffer slice directly
+                # silence, zero the buffer slice directly
                 for i in range(chunk * 2):
                     buf[i] = 0
             audio.write(memoryview(buf)[:chunk * 2])

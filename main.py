@@ -76,102 +76,65 @@ except Exception as e:
     print(f"WiFi error: {e}")
     wifi_connected = False
 
-# 5. Core Screens (Always loaded)
+# 5. Core Screens
 from src.clock   import ClockScreen
 from src.menu    import MenuScreen
-from src.weather import WeatherManager 
 
 print("Shelby OS started.")
-wdt = WDT(timeout=8000)
+
+# WDT DISABLED FOR TESTING
+wdt = None
 
 clock = ClockScreen(display)
 menu_scr = MenuScreen(display, FONT)
-weather_mgr = WeatherManager(secrets)
-
-if wifi_connected:
-    weather_mgr.update()
-    clock.weather = weather_mgr.condition
 
 clock.show_menu_hint(0)
 clock.update()
 
 # 6. Navigation state
 current_view  = "Clock"
-active_app    = None    # <-- Holds the dynamically loaded app
+active_app    = None    
 last_gh_fetch = time.ticks_ms() - 300000
-last_we_fetch = time.ticks_ms()
 gh_count      = 0
-
 
 # --- HELPER: LAZY LOAD AN APP ---
 def load_app(module_name, class_name, *args):
-    """Dynamically imports an app module, instantiates it, and returns the object."""
     gc.collect()
     print(f"Loading {module_name}...")
-    mod = __import__(f"src.{module_name}", None, None, [class_name])
-    app_class = getattr(mod, class_name)
-    app = app_class(*args)
-    app.show()
-    return app
+    try:
+        mod = __import__(f"src.{module_name}", None, None, [class_name])
+        app_class = getattr(mod, class_name)
+        app = app_class(*args)
+        app.show()
+        return app
+    except Exception as e:
+        print(f"Failed to load {module_name}: {e}")
+        return None
 
 # --- HELPER: UNLOAD AN APP ---
 def unload_app():
-    """Destroys the current app and forcefully removes it from RAM."""
     global active_app
     active_app = None
     
-    # Identify modules that aren't core and delete them from sys.modules
     core_modules = ["sys", "gc", "machine", "time", "urequests", "st7735", 
-                    "src.font", "src.clock", "src.menu", "src.weather", "src.wifi_manager", "secrets"]
+                    "src.font", "src.clock", "src.menu", "src.wifi_manager", "secrets"]
     
     for mod_name in list(sys.modules.keys()):
         if mod_name not in core_modules and not mod_name.startswith("src.utils") and not mod_name.startswith("src.icons"):
             del sys.modules[mod_name]
             
-    gc.collect()  # Nuke the dead app from RAM immediately!
-
+    gc.collect() 
 
 # 7. Main loop
 while True:
-    wdt.feed()  # Pet the watchdog
+    if wdt:
+        wdt.feed() 
     
     for b in btns.values():
         b.update()
 
     if current_view == "Clock":
         clock.update()
-
-    # Background GitHub fetch
-    if wifi_connected and time.ticks_diff(time.ticks_ms(), last_gh_fetch) > 300000:
-        gc.collect()
-        try:
-            headers = {"Authorization": f"Bearer {secrets.get('github_token', '')}", "User-Agent": "Sprig-Shelby"}
-            r = urequests.get("https://api.github.com/notifications?per_page=5", headers=headers, stream=True, timeout=5)
-            if r.status_code == 200:
-                gh_count = 0
-                while True:
-                    wdt.feed()
-                    chunk = r.raw.read(128)
-                    if not chunk: break
-                    gh_count += chunk.decode("utf-8", "ignore").count('"id":')
-            try: r.raw.close()
-            except: pass
-            r.close()
-        except: pass
-        gc.collect()
-        last_gh_fetch = time.ticks_ms()
-        if current_view == "Clock":
-            clock.show_menu_hint(0, gh_count, 0)
-
-    # Background Weather fetch
-    if wifi_connected and time.ticks_diff(time.ticks_ms(), last_we_fetch) > 60000:
-        gc.collect()
-        if weather_mgr.update():
-            clock.weather = weather_mgr.condition
-            clock._particles = []          
-            clock.needs_full_redraw = True
-        gc.collect()
-        last_we_fetch = time.ticks_ms()
 
     # J button - Global back to menu
     if btns["J"].pressed():
@@ -182,7 +145,7 @@ while True:
             clock.show_menu_hint(0, gh_count, 0)
             clock.update()
         elif current_view not in ["Clock", "Menu"]:
-            pass # Active app handles J itself
+            pass 
 
     # --- PER-SCREEN INPUT ---
     if current_view == "Clock":
@@ -195,7 +158,7 @@ while True:
         
         if result == "github" and wifi_connected:
             current_view = "GitHub"
-            active_app = load_app("github", "GithubScreen", display, FONT, secrets)
+            active_app = load_app("github", "GithubScreen", display, FONT, secrets, wdt)
             
         elif result == "system":
             current_view = "System"
@@ -215,22 +178,23 @@ while True:
             
         elif result == "music":
             current_view = "Music"
-            # We must load settings first temporarily if music depends on it, or update music.py
-            # For now, if Music requires st_scr, we create a dummy one or adapt it.
             active_app = load_app("music", "MusicScreen", display, FONT, None)
+            
+        if result and current_view not in ["Clock", "Menu"] and active_app is None:
+            current_view = "Menu"
+            menu_scr.show()
 
     # --- ACTIVE APP INPUT HANDLING ---
     elif active_app is not None:
         result = active_app.handle_input(btns)
         
         if result == "menu":
-            # If we were in settings, apply the 24h change before closing
             if current_view == "Settings" and hasattr(active_app, "use_24h"):
                 clock.use_24h = active_app.use_24h
                 clock.needs_full_redraw = True
                 clock.last_sec = -1
                 
-            unload_app() # FREE ALL THE RAM
+            unload_app() 
             current_view = "Menu"
             menu_scr.show()
 
