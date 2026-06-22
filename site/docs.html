@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shelby — the handbook</title>
+<meta name="description" content="Install, configure and live with Shelby: secrets.py, tasks.json, the app reference and the button map." />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Newsreader:opsz,wght@6..72,300..600&family=Space+Mono:wght@400;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .doc-shell { display: grid; grid-template-columns: 220px 1fr; gap: clamp(30px,5vw,70px); align-items: start; padding: 48px 0 90px; }
+  .toc { position: sticky; top: 86px; font-family: var(--mono); font-size: 12.5px; }
+  .toc h6 { text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint); margin: 0 0 14px; font-size: 11px; }
+  .toc a { display: block; padding: 6px 0; color: var(--ink-soft); text-decoration: none; border-left: 2px solid transparent; padding-left: 12px; margin-left: -2px; }
+  .toc a:hover { color: var(--ink); border-color: var(--gold); }
+  .doc-body { max-width: 64ch; }
+  .doc-body h2 { font-family: var(--display); font-weight: 380; font-size: clamp(26px,3.4vw,38px); letter-spacing: -.02em; margin: 54px 0 10px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  .doc-body h2:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .doc-body h3 { font-family: var(--display); font-weight: 480; font-size: 21px; margin: 30px 0 6px; }
+  .doc-body p, .doc-body li { font-size: 17.5px; color: var(--ink-soft); }
+  .doc-body code { font-family: var(--mono); font-size: .85em; background: var(--paper-deep); padding: 1px 6px; border-radius: 3px; color: var(--gold-deep); }
+  .doc-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 15.5px; }
+  .doc-body th { text-align: left; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); padding: 8px 10px; border-bottom: 1.5px solid var(--rule); }
+  .doc-body td { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .doc-body td:first-child { font-family: var(--mono); font-size: 13px; color: var(--ink); white-space: nowrap; }
+  .callout { border-left: 3px solid var(--gold); background: color-mix(in srgb, var(--gold) 8%, var(--paper)); padding: 14px 18px; border-radius: 0 4px 4px 0; margin: 22px 0; font-size: 16px; }
+  .callout.warn { border-color: var(--orange); background: color-mix(in srgb, var(--orange) 8%, var(--paper)); }
+  .callout .lbl { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--gold-deep); display: block; margin-bottom: 4px; }
+  .callout.warn .lbl { color: var(--orange); }
+  .doc-lede { font-family: var(--display); font-weight: 330; font-size: clamp(22px,3vw,30px); line-height: 1.45; letter-spacing: -.01em; color: var(--ink); max-width: 20ch; margin: 0 0 8px; }
+  @media (max-width: 820px){ .doc-shell { grid-template-columns: 1fr; } .toc { position: static; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><a href="index.html" style="text-decoration:none"><span class="mark">Shelby</span></a> <span class="by">the handbook</span></div>
+    <nav class="nav">
+      <a href="index.html">← home</a>
+      <a href="#install">install</a>
+      <a href="#secrets">config</a>
+      <a href="#apps">apps</a>
+      <a href="https://github.com/Swamstick911/Shelby/" target="_blank" rel="noopener">github ↗</a>
+    </nav>
+    <span class="status"><span class="dot"></span> docs</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div style="padding:54px 0 6px">
+    <p class="kicker">the handbook</p>
+    <p class="doc-lede">Everything you need to take a stock Sprig and live with Shelby.</p>
+  </div>
+
+  <div class="doc-shell">
+    <aside class="toc">
+      <h6>Contents</h6>
+      <a href="#before">Before you start</a>
+      <a href="#install">Installing</a>
+      <a href="#secrets">secrets.py</a>
+      <a href="#tasks">tasks.json</a>
+      <a href="#controls">Button map</a>
+      <a href="#apps">App reference</a>
+      <a href="#overclock">Overclocking</a>
+      <a href="#trouble">Troubleshooting</a>
+    </aside>
+
+    <main class="doc-body">
+      <h2 id="before">Before you start</h2>
+      <p>You’ll need three things: a Hack Club <a href="https://sprig.hackclub.com/" target="_blank" rel="noopener">Sprig</a>, a USB cable that carries data (not just power), and Python 3 on your computer. Shelby is MicroPython, so the device firmware and your machine’s Python are separate — your machine only runs the upload tool.</p>
+      <div class="callout"><span class="lbl">Good to know</span>Shelby keeps Sprig’s stock bootloader. Nothing here is permanent — you can always reflash the original game firmware over USB.</div>
+
+      <h2 id="install">Installing</h2>
+      <h3>1 — Get the firmware</h3>
+      <p>Clone the repository (or download a release tarball) and install <code>mpremote</code>, the official MicroPython upload tool.</p>
+      <pre class="codeblock"><span class="c"># clone + tooling</span>
+git clone https://github.com/Swamstick911/Shelby
+cd Shelby
+pip install <span class="p">mpremote</span></pre>
+
+      <h3>2 — Configure your secrets</h3>
+      <p>Copy the example file and fill it in (see <a href="#secrets">secrets.py</a> below). Without it, the device boots to a friendly <code>secrets.py not found!</code> screen and waits.</p>
+      <pre class="codeblock">cp secret.py.example <span class="s">secrets.py</span></pre>
+
+      <h3>3 — Flash it</h3>
+      <p>Plug the Sprig in, then copy the whole tree to the device and reset.</p>
+      <pre class="codeblock">mpremote connect auto fs cp -r . :
+mpremote reset</pre>
+      <div class="callout warn"><span class="lbl">If it won’t connect</span>Close any other serial monitor (Thonny, the Arduino IDE, a stray terminal). Only one program can hold the port. On Windows, check Device Manager for the COM port and try <code>mpremote connect COM5</code>.</div>
+
+      <h2 id="secrets">secrets.py</h2>
+      <p>A single Python dict named <code>secrets</code>. Everything Shelby needs to reach the network and the APIs lives here. It’s git-ignored — your tokens never leave the device.</p>
+      <table>
+        <thead><tr><th>Key</th><th>What it’s for</th></tr></thead>
+        <tbody>
+          <tr><td>ssid</td><td>Your Wi‑Fi network name. Needed for the clock’s NTP sync and every API app.</td></tr>
+          <tr><td>password</td><td>Wi‑Fi password.</td></tr>
+          <tr><td>timezone</td><td>UTC offset in hours (e.g. <code>5.5</code> for IST). Drives the clock.</td></tr>
+          <tr><td>github_user</td><td>The username whose contribution graph you want.</td></tr>
+          <tr><td>github_token</td><td>A personal access token (read-only is plenty) for the GitHub API.</td></tr>
+          <tr><td>hackatime_key</td><td>Your Hackatime API key, for the coding-hours app.</td></tr>
+        </tbody>
+      </table>
+      <pre class="codeblock">secrets = {
+  <span class="s">"ssid"</span>:          <span class="s">"home-net"</span>,
+  <span class="s">"password"</span>:      <span class="s">"••••••••"</span>,
+  <span class="s">"timezone"</span>:      <span class="p">5.5</span>,
+  <span class="s">"github_user"</span>:   <span class="s">"swamstick911"</span>,
+  <span class="s">"github_token"</span>:  <span class="s">"ghp_••••"</span>,
+  <span class="s">"hackatime_key"</span>: <span class="s">"••••"</span>,
+}</pre>
+
+      <h2 id="tasks">tasks.json</h2>
+      <p>The Tasks app reads this file straight off the device. No account, no sync — edit the file, reflash, done. It’s a plain list of strings (or objects, if you want a done flag).</p>
+      <pre class="codeblock">[
+  { <span class="s">"text"</span>: <span class="s">"flash the firmware"</span>, <span class="s">"done"</span>: <span class="p">true</span> },
+  { <span class="s">"text"</span>: <span class="s">"write the docs"</span>,     <span class="s">"done"</span>: <span class="p">false</span> },
+  { <span class="s">"text"</span>: <span class="s">"ship the website"</span>,   <span class="s">"done"</span>: <span class="p">false</span> }
+]</pre>
+
+      <h2 id="controls">Button map</h2>
+      <p>Two D-pads, eight buttons. Shelby borrows the keys the Sprig editor already taught your fingers.</p>
+      <table>
+        <thead><tr><th>Button</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td>L</td><td>From the clock, open the menu.</td></tr>
+          <tr><td>W / S</td><td>Move the selection up / down.</td></tr>
+          <tr><td>I</td><td>Select / open / tick a task.</td></tr>
+          <tr><td>J</td><td>Back — to the menu, or from the menu to the clock.</td></tr>
+          <tr><td>A / D / K</td><td>Context actions inside apps (volume, paging).</td></tr>
+        </tbody>
+      </table>
+      <div class="callout"><span class="lbl">Try it first</span>The <a href="index.html#try">live demo on the home page</a> runs this exact navigation in your browser. Same keys.</div>
+
+      <h2 id="apps">App reference</h2>
+      <h3>Clock</h3>
+      <p>The home screen. Syncs over NTP on boot, applies your <code>timezone</code> offset, and redraws once a minute. A hint bar along the bottom previews what’s waiting (new GitHub activity, pending tasks).</p>
+      <h3>GitHub</h3>
+      <p>Pulls 18 weeks of contributions for <code>github_user</code> and draws the familiar heat-grid, plus a total and current streak. Needs Wi‑Fi and a valid <code>github_token</code>.</p>
+      <h3>Hackatime</h3>
+      <p>Shows today’s and this week’s coding time with a per-project breakdown, pulled from the Hackatime API using <code>hackatime_key</code>.</p>
+      <h3>System</h3>
+      <p>Live vitals: free RAM against the 264&nbsp;KB ceiling, Wi‑Fi state and signal, current clock speed, and uptime.</p>
+      <h3>Tasks</h3>
+      <p>Renders <code>tasks.json</code>. Move with W/S, tick with I.</p>
+      <h3>Music</h3>
+      <p>Plays simple tones through the buzzer with a small visualizer and an adjustable volume.</p>
+
+      <h2 id="overclock">Overclocking</h2>
+      <p>Shelby runs the RP2040 at <code>250&nbsp;MHz</code> instead of the stock 133. The clock’s once-a-minute full redraw stutters at stock speed; the bump smooths it out and every app feels snappier. It’s well within the chip’s tolerance, but if you’d rather not, set the frequency back in <code>main.py</code>.</p>
+      <div class="callout warn"><span class="lbl">Heads up</span>Higher clock = slightly more battery draw. On 2× AAA you’ll still get many hours, just not the full stock 30.</div>
+
+      <h2 id="trouble">Troubleshooting</h2>
+      <h3>“secrets.py not found!”</h3>
+      <p>The file didn’t make it to the device, or it’s named wrong. Reflash and confirm <code>mpremote fs ls</code> lists <code>secrets.py</code> at the root.</p>
+      <h3>Clock shows the wrong time</h3>
+      <p>Check <code>timezone</code> in <code>secrets.py</code> — it’s an hour offset, and it can be fractional (e.g. <code>5.5</code>, <code>-4</code>). NTP only runs when Wi‑Fi connects.</p>
+      <h3>GitHub / Hackatime screens are empty</h3>
+      <p>Almost always Wi‑Fi or a stale token. The System app will tell you if Wi‑Fi is down. Regenerate the token if it’s old.</p>
+      <h3>Out of memory</h3>
+      <p>Apps lazy-load and unload to fit 264&nbsp;KB. If you’ve added your own app, make sure it cleans up on exit so the next one has room.</p>
+    </main>
+  </div>
+</div>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="mark">Shelby</div>
+        <p>Questions the docs didn’t answer? The source is the source of truth — and it’s readable.</p>
+      </div>
+      <div class="cols">
+        <div>
+          <h5>Project</h5>
+          <ul>
+            <li><a href="https://github.com/Swamstick911/Shelby/" target="_blank" rel="noopener">Source on GitHub</a></li>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#install">Install guide</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>The hardware</h5>
+          <ul>
+            <li><a href="https://sprig.hackclub.com/" target="_blank" rel="noopener">Get a Sprig</a></li>
+            <li><a href="https://hackclub.com/" target="_blank" rel="noopener">Hack Club</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="colophon">
+      <span>Not affiliated with Hack Club — just built on their lovely hardware.</span>
+      <span>Made by hand.</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

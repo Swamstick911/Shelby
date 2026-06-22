@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shelby</title>
+<meta name="description" content="A real Sprig running Shelby, the firmware that turns a games console into a desk companion. The screen is the only light. Move your flashlight to find the rest." />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Newsreader:opsz,wght@6..72,300..500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="flashlight.css" />
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="mark">Shelby</span> <span class="by">firmware for sprig</span></div>
+    <nav>
+      <a href="#apps">the apps</a>
+      <a href="#specs">hardware</a>
+      <a href="#install">install</a>
+      <a href="docs.html">docs</a>
+      <a href="https://github.com/Swamstick911/Shelby/" target="_blank" rel="noopener">github</a>
+    </nav>
+  </div>
+</header>
+
+<!-- 1 — hero with the real green Sprig -->
+<section class="hero">
+  <div class="wrap">
+    <div class="device-wrap glow">
+      <canvas id="sprig3d" aria-label="Real 3D Sprig running Shelby. Drag to rotate."></canvas>
+      <canvas id="screen" width="320" height="256" hidden></canvas>
+    </div>
+
+    <p class="kicker">most of this page is in the dark</p>
+    <h1>The screen is the only thing&nbsp;<em>lit.</em></h1>
+    <p class="lede">This is the real Sprig, the Hack&nbsp;Club handheld, running <b>Shelby</b>, the firmware I wrote to make it the most useful thing on my desk. Everything else is hiding in the dark. Move your light to find it.</p>
+    <div class="hints">
+      <span class="pill">move your mouse to look around</span>
+      <span class="pill">drag the board to spin it</span>
+      <span class="pill">press W A S D I J K L</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2 — the apps -->
+<section class="band" id="apps">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">01 . the apps</span>
+      <h2>Six things, hiding in the dark.</h2>
+      <p>Sweep your light across the desk. Every screen here is live, drawn the same way it draws on the device.</p>
+    </div>
+    <div class="apps">
+      <div class="app">
+        <div class="lcd small glow"><canvas data-screen="clock" width="200" height="160"></canvas></div>
+        <div class="meta"><span class="tag">home</span><h3>Clock</h3><p>Boots here. It knows your timezone and redraws every minute.</p></div>
+      </div>
+      <div class="app">
+        <div class="lcd small glow"><canvas data-screen="github" width="200" height="160"></canvas></div>
+        <div class="meta"><span class="tag">streaks</span><h3>GitHub</h3><p>Eighteen weeks of contributions, pulled with a token and drawn as the graph you know.</p></div>
+      </div>
+      <div class="app">
+        <div class="lcd small glow"><canvas data-screen="hackatime" width="200" height="160"></canvas></div>
+        <div class="meta"><span class="tag">time</span><h3>Hackatime</h3><p>Today and this week in code, broken down by project.</p></div>
+      </div>
+      <div class="app">
+        <div class="lcd small glow"><canvas data-screen="tasks" width="200" height="160"></canvas></div>
+        <div class="meta"><span class="tag">to do</span><h3>Tasks</h3><p>A plain list you keep in a JSON file. Tick things off with the buttons.</p></div>
+      </div>
+      <div class="app">
+        <div class="lcd small glow"><canvas data-screen="system" width="200" height="160"></canvas></div>
+        <div class="meta"><span class="tag">vitals</span><h3>System</h3><p>Free memory, WiFi, clock speed and uptime. The device watching itself.</p></div>
+      </div>
+      <div class="app">
+        <div class="lcd small glow"><canvas data-screen="music" width="200" height="160"></canvas></div>
+        <div class="meta"><span class="tag">for fun</span><h3>Music</h3><p>Beeps through the buzzer with a tiny visualizer and a volume you can lower.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 — specs -->
+<section class="band" id="specs">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">02 . the hardware</span>
+      <h2>What it runs on.</h2>
+      <p>A stock Sprig. The only change is software, and a slightly braver clock speed.</p>
+    </div>
+    <div class="specs">
+      <div class="spec"><div class="k">Processor <small>raspberry pi pico, rp2040</small></div><div class="v">2 cores at 250 MHz</div></div>
+      <div class="spec"><div class="k">Display <small>spi, st7735 driver</small></div><div class="v">160 by 128, 16 bit</div></div>
+      <div class="spec"><div class="k">Memory <small>the real constraint</small></div><div class="v">264 KB SRAM</div></div>
+      <div class="spec"><div class="k">Input <small>two button clusters</small></div><div class="v">8 buttons, WASD and IJKL</div></div>
+      <div class="spec"><div class="k">Connectivity <small>for clock and apis</small></div><div class="v">WiFi with NTP</div></div>
+      <div class="spec"><div class="k">Runtime <small>lazy loaded apps</small></div><div class="v">MicroPython</div></div>
+      <div class="spec"><div class="k">Power <small>stock cells</small></div><div class="v">2 AAA, about 30 hours</div></div>
+      <div class="spec"><div class="k">Cost to a teen <small>hack club ships it</small></div><div class="v">0 dollars</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 — install -->
+<section class="band" id="install">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">03 . make it yours</span>
+      <h2>Four steps from stock to Shelby.</h2>
+      <p>You need a Sprig, a USB cable that carries data, and Python on your machine.</p>
+    </div>
+    <div class="install">
+      <ol class="steps">
+        <li><h4>Grab the firmware</h4><p>Clone the repo and install the upload tool.</p></li>
+        <li><h4>Add your secrets</h4><p>Copy <code>secret.py.example</code> to <code>secrets.py</code> and fill in WiFi, your GitHub token and your Hackatime key.</p></li>
+        <li><h4>Set your tasks</h4><p>Write the things you want to see in <code>tasks.json</code>.</p></li>
+        <li><h4>Flash over USB</h4><p>Push it all with <code>mpremote</code>. It boots straight into the clock.</p></li>
+      </ol>
+      <pre class="codeblock glow"><span class="c"># get it</span>
+git clone https://github.com/Swamstick911/Shelby
+cd Shelby
+pip install <span class="p">mpremote</span>
+
+<span class="c"># your secrets</span>
+cp secret.py.example <span class="s">secrets.py</span>
+
+<span class="c"># flash the whole tree, then reboot</span>
+mpremote connect auto fs cp -r . :
+mpremote reset
+
+<span class="c"># boots into Shelby. press L for the menu.</span></pre>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div>
+      <div class="mark">Shelby</div>
+      <p>A custom firmware that makes the Hack Club Sprig the most useful thing on a desk. Written in MicroPython, with respect for 264 KB of RAM.</p>
+    </div>
+    <div class="cols">
+      <div><h5>Project</h5><ul>
+        <li><a href="https://github.com/Swamstick911/Shelby/" target="_blank" rel="noopener">Source on GitHub</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="#install">Install guide</a></li>
+      </ul></div>
+      <div><h5>The hardware</h5><ul>
+        <li><a href="https://sprig.hackclub.com/" target="_blank" rel="noopener">Get a Sprig</a></li>
+        <li><a href="https://hackclub.com/" target="_blank" rel="noopener">Hack Club</a></li>
+      </ul></div>
+    </div>
+  </div>
+</footer>
+
+<!-- the darkness + the torch ring -->
+<div class="dark"></div>
+<div class="torch"></div>
+
+<script type="module" src="flashlight.js"></script>
+</body>
+</html>

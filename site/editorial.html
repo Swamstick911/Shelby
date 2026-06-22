@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shelby — a desk companion living inside a games console</title>
+<meta name="description" content="Shelby is a custom firmware that turns the Hack Club Sprig from a games console into the little glowing thing on my desk: a clock, my GitHub graph, my coding hours, my tasks." />
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=Space+Mono:wght@400;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ top bar ============ -->
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <span class="mark">Shelby</span>
+      <span class="by">firmware for sprig</span>
+    </div>
+    <nav class="nav">
+      <a href="#what">the idea</a>
+      <a href="#apps">the apps</a>
+      <a href="#try">try it</a>
+      <a href="#install">install</a>
+      <a href="docs.html">docs</a>
+      <a href="https://github.com/Swamstick911/Shelby/" target="_blank" rel="noopener">github ↗</a>
+    </nav>
+    <span class="status"><span class="dot"></span> <span id="status-text">online · 250&nbsp;MHz</span></span>
+  </div>
+</header>
+
+<!-- ============ hero ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="kicker">a small, opinionated firmware</p>
+      <h1>I turned a games&nbsp;console into the thing&nbsp;I <em>actually</em> use.</h1>
+      <p class="lede">Sprig ships as a tiny handheld for making games. I liked the hardware more than I liked playing on it — so I rewrote the firmware. Now it sits on my desk as <b>Shelby</b>: a clock, my GitHub streak, my coding hours, my to‑dos. The whole little OS, on a 160×128 screen.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#try">try it in the browser →</a>
+        <a class="btn btn-ghost" href="#install">flash your own</a>
+      </div>
+    </div>
+
+    <div class="hero-device">
+      <p class="marginalia m-clock">timezone-aware,<br>ticks every minute</p>
+      <svg class="arrow a-clock" viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12 C 34 4, 70 14, 92 44"/><path d="M92 44 L 80 40 M92 44 L 86 31"/></svg>
+      <p class="marginalia m-glow">that glow is a real<br>backlit LCD →</p>
+      <svg class="arrow a-glow" viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12 C 34 4, 70 14, 92 44"/><path d="M92 44 L 80 40 M92 44 L 86 31"/></svg>
+
+      <div class="device">
+        <div class="screen-frame">
+          <canvas data-screen="clock" width="320" height="256" aria-label="Live Shelby clock"></canvas>
+        </div>
+        <div class="dpads">
+          <div class="dpad" aria-hidden="true">
+            <div class="key k-u">W</div><div class="key k-l">A</div>
+            <div class="center"></div>
+            <div class="key k-r">D</div><div class="key k-d">S</div>
+          </div>
+          <div class="dpad" aria-hidden="true">
+            <div class="key k-u">I</div><div class="key k-l">J</div>
+            <div class="center"></div>
+            <div class="key k-r">L</div><div class="key k-d">K</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ manifesto ============ -->
+<section class="band" id="what">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div><span class="sec-no">01 — the idea</span><h2>A console nobody was gaming on.</h2></div>
+      <p class="aside">Sprig is by Hack&nbsp;Club. Raspberry&nbsp;Pi&nbsp;Pico, eight buttons, one little screen.</p>
+    </div>
+    <div class="manifesto reveal">
+      <p class="lead-q">“Every player is a creator,” the box said. Fine — I created an operating system instead of a game.</p>
+      <div class="body">
+        <p>The Sprig is genuinely lovely hardware: a dual-core RP2040, a crisp 160×128 LCD, two D-pads, and 30 hours on a pair of AAAs. It’s built to write little JavaScript games in a browser editor and flash them over USB. I did that for an afternoon, and then the device went in a drawer.</p>
+        <p>What I really wanted was something that earned a permanent spot on my desk — something glanceable. So Shelby keeps the hardware and throws out the premise. It boots straight into a clock, syncs the time over Wi‑Fi, and from one button-press you reach the handful of things I check all day: my GitHub contribution graph, my Hackatime hours, a task list, the device’s own vitals, and a little music player for good measure.</p>
+        <p>It’s written in MicroPython, lazy-loads each app so the 264&nbsp;KB of RAM survives, and runs the chip a little hot at 250&nbsp;MHz so the clock never stutters. None of that matters to you. What matters is it’s the most useful object on my desk that cost me zero dollars.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ apps ============ -->
+<section class="band dark" id="apps">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div><span class="sec-no">02 — the apps</span><h2>Six screens. The ones I open without thinking.</h2></div>
+      <p class="aside">Every screen below is rendered live, the same way it draws on the device.</p>
+    </div>
+    <div class="apps reveal">
+      <article class="app-card">
+        <div class="app-screen"><canvas data-screen="clock" width="200" height="160"></canvas></div>
+        <span class="tag">home</span><h3>Clock</h3>
+        <p>Boots here. Timezone-aware, redraws once a minute, shows a hint bar of what’s waiting in the menu.</p>
+        <p class="note">the whole reason the chip is overclocked.</p>
+      </article>
+      <article class="app-card">
+        <div class="app-screen"><canvas data-screen="github" width="200" height="160"></canvas></div>
+        <span class="tag">streaks</span><h3>GitHub</h3>
+        <p>Eighteen weeks of contributions pulled with a personal token and drawn as the graph you already know.</p>
+        <p class="note">guilt, rendered in four shades of green.</p>
+      </article>
+      <article class="app-card">
+        <div class="app-screen"><canvas data-screen="hackatime" width="200" height="160"></canvas></div>
+        <span class="tag">time</span><h3>Hackatime</h3>
+        <p>Today’s and this week’s coding hours, broken down by project, straight from the Hackatime API.</p>
+        <p class="note">it knows how long I’ve been on this.</p>
+      </article>
+      <article class="app-card">
+        <div class="app-screen"><canvas data-screen="tasks" width="200" height="160"></canvas></div>
+        <span class="tag">to-do</span><h3>Tasks</h3>
+        <p>A plain list you set in a JSON file. Tick things off with the buttons. No account, no cloud, no nagging.</p>
+        <p class="note">tasks.json is the entire backend.</p>
+      </article>
+      <article class="app-card">
+        <div class="app-screen"><canvas data-screen="system" width="200" height="160"></canvas></div>
+        <span class="tag">vitals</span><h3>System</h3>
+        <p>Free RAM, Wi‑Fi state, clock speed, uptime — the device watching its own health in real time.</p>
+        <p class="note">264KB of RAM. you learn to respect it.</p>
+      </article>
+      <article class="app-card">
+        <div class="app-screen"><canvas data-screen="music" width="200" height="160"></canvas></div>
+        <span class="tag">for fun</span><h3>Music</h3>
+        <p>Beeps and boops through the buzzer with a tiny visualizer and a volume you can actually turn down.</p>
+        <p class="note">five channels, four waveforms, zero taste.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ interactive ============ -->
+<section class="band" id="try">
+  <div class="wrap demo">
+    <div class="demo-copy reveal">
+      <span class="sec-no">03 — try it</span>
+      <h2>Here it is. Go on, press something.</h2>
+      <p>This is the real navigation, running in your browser. Use the on-screen pad, or your keyboard — exactly the keys the physical device uses. <b>L</b> opens the menu from the clock, <b>W/S</b> move, <b>I</b> selects, <b>J</b> goes back.</p>
+      <div class="keys-legend">
+        <span><kbd>W</kbd><kbd>S</kbd> move</span>
+        <span><kbd>I</kbd> select</span>
+        <span><kbd>J</kbd> back</span>
+        <span><kbd>L</kbd> menu</span>
+      </div>
+    </div>
+    <div class="hero-device">
+      <div class="device">
+        <div class="screen-frame">
+          <canvas id="demo-canvas" data-screen="interactive" width="320" height="256" tabindex="0" aria-label="Interactive Shelby demo — focus and use W A S D I J K L"></canvas>
+        </div>
+        <div class="dpads">
+          <div class="dpad" data-pad>
+            <div class="key k-u" data-key="W">W</div><div class="key k-l" data-key="A">A</div>
+            <div class="center"></div>
+            <div class="key k-r" data-key="D">D</div><div class="key k-d" data-key="S">S</div>
+          </div>
+          <div class="dpad" data-pad>
+            <div class="key k-u" data-key="I">I</div><div class="key k-l" data-key="J">J</div>
+            <div class="center"></div>
+            <div class="key k-r" data-key="L">L</div><div class="key k-d" data-key="K">K</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ teardown / specs ============ -->
+<section class="band dark" id="specs">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div><span class="sec-no">04 — what it runs on</span><h2>The hardware, and what Shelby asks of it.</h2></div>
+      <p class="aside">Stock Sprig. The only mod is software — and a slightly braver clock speed.</p>
+    </div>
+    <div class="specs reveal">
+      <div class="spec"><div class="k">Processor <small>raspberry pi pico · rp2040</small></div><div class="v">2× Arm M0+ @ 250MHz</div></div>
+      <div class="spec"><div class="k">Display <small>spi, st7735 driver</small></div><div class="v">160×128 · 16-bit color</div></div>
+      <div class="spec"><div class="k">Memory <small>the real constraint</small></div><div class="v">264 KB SRAM</div></div>
+      <div class="spec"><div class="k">Input <small>two d-pads</small></div><div class="v">8 buttons · WASD + IJKL</div></div>
+      <div class="spec"><div class="k">Connectivity <small>for clock + apis</small></div><div class="v">Wi‑Fi + NTP sync</div></div>
+      <div class="spec"><div class="k">Runtime <small>lazy-loaded apps</small></div><div class="v">MicroPython</div></div>
+      <div class="spec"><div class="k">Power <small>stock cells</small></div><div class="v">2× AAA · ~30 hrs</div></div>
+      <div class="spec"><div class="k">Cost to a teen <small>hack club ships it</small></div><div class="v">$0</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ install ============ -->
+<section class="band" id="install">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div><span class="sec-no">05 — make it yours</span><h2>Four steps from stock to Shelby.</h2></div>
+      <p class="aside">You’ll need a Sprig, a USB cable, and Python on your machine.</p>
+    </div>
+    <div class="install reveal">
+      <ol class="steps">
+        <li><h4>Grab the firmware</h4><p>Clone the repo (or download a release) and install the upload tooling.</p></li>
+        <li><h4>Add your secrets</h4><p>Copy <code>secret.py.example</code> to <code>secrets.py</code> and drop in your Wi‑Fi, GitHub token, and Hackatime key.</p></li>
+        <li><h4>Set your tasks</h4><p>Open <code>tasks.json</code> and write the to-dos you want on the screen. That’s the whole task backend.</p></li>
+        <li><h4>Flash it over USB</h4><p>Plug the Sprig in and push everything with <code>mpremote</code>. It reboots straight into the clock.</p></li>
+      </ol>
+      <div>
+        <pre class="codeblock"><span class="c"># 1 — get it</span>
+git clone https://github.com/Swamstick911/Shelby
+cd Shelby
+pip install <span class="p">mpremote</span>
+
+<span class="c"># 2 — your secrets</span>
+cp secret.py.example <span class="s">secrets.py</span>
+<span class="c"># edit wifi / github token / hackatime key</span>
+
+<span class="c"># 3 — flash the whole tree</span>
+mpremote connect auto fs cp -r . :
+mpremote reset
+
+<span class="c"># → boots into Shelby. press L for the menu.</span></pre>
+        <p style="font-family:var(--hand);color:var(--orange);font-size:21px;margin:16px 2px 0;transform:rotate(-1.5deg);">full walkthrough + every config field lives in the <a href="docs.html" style="text-decoration-color:var(--orange)">docs →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ footer ============ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="mark">Shelby</div>
+        <p>A custom firmware that makes the Hack Club Sprig the most useful thing on a desk. Built in MicroPython, held together with respect for 264KB of RAM.</p>
+      </div>
+      <div class="cols">
+        <div>
+          <h5>Project</h5>
+          <ul>
+            <li><a href="https://github.com/Swamstick911/Shelby/" target="_blank" rel="noopener">Source on GitHub</a></li>
+            <li><a href="docs.html">Documentation</a></li>
+            <li><a href="#install">Install guide</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>The hardware</h5>
+          <ul>
+            <li><a href="https://sprig.hackclub.com/" target="_blank" rel="noopener">Get a Sprig</a></li>
+            <li><a href="https://hackclub.com/" target="_blank" rel="noopener">Hack Club</a></li>
+            <li><a href="#specs">Specs</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="colophon">
+      <span>Not affiliated with Hack Club — just built on their lovely hardware.</span>
+      <span>Set in Fraunces, Newsreader &amp; Space Mono. Made by hand.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

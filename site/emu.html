@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Shelby firmware emulator</title>
+<style>
+  body{ background:#0b0f0c; color:#cfe0c2; font-family:monospace; padding:20px; }
+  #wrap{ display:flex; gap:30px; align-items:flex-start; }
+  canvas#big{ image-rendering:pixelated; width:480px; height:384px; background:#000; border:2px solid #2b5; }
+  #log{ white-space:pre-wrap; font-size:12px; max-width:380px; }
+  kbd{ background:#1b2; color:#021; padding:2px 7px; border-radius:3px; }
+  .keys{ margin-top:14px; line-height:1.8; }
+</style>
+</head>
+<body>
+<h3>Shelby real-firmware emulator</h3>
+<div id="wrap">
+  <canvas id="big" width="160" height="128"></canvas>
+  <div>
+    <div id="log">booting MicroPython...</div>
+    <div class="keys">
+      <div>move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+      <div>select <kbd>I</kbd> · back <kbd>J</kbd> · menu <kbd>L</kbd> · <kbd>K</kbd></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { loadEmulator } from "./emu.js";
+const logEl = document.getElementById("log");
+const log = (m) => { logEl.textContent += "\n" + m; console.log("EMU:", m); };
+const big = document.getElementById("big");
+const bctx = big.getContext("2d");
+bctx.imageSmoothingEnabled = false;
+
+try {
+  const emu = await loadEmulator();
+  log("emulator loaded. driving step()...");
+  window.__emu = emu;
+
+  // keyboard -> firmware buttons
+  const DEVICE = new Set(["W","A","S","D","I","J","K","L"]);
+  addEventListener("keydown", (e) => { const k = e.key.toUpperCase(); if (DEVICE.has(k)) { e.preventDefault(); emu.setKey(k, true); } });
+  addEventListener("keyup",   (e) => { const k = e.key.toUpperCase(); if (DEVICE.has(k)) { e.preventDefault(); emu.setKey(k, false); } });
+
+  let n = 0, err = null;
+  setInterval(() => {
+    try { emu.step(); } catch (e) { if (!err) { err = e; log("step error: " + e.message); } }
+    bctx.clearRect(0,0,160,128);
+    bctx.drawImage(emu.screen, 0, 0);
+    n++;
+    if (n === 20) { log("running. (clock should be visible)"); window.__emuResult = "ok"; }
+  }, 50);
+} catch (e) {
+  log("FAILED: " + (e && e.message ? e.message : e));
+  console.error(e);
+  window.__emuResult = "fail: " + (e && e.message ? e.message : e);
+}
+</script>
+</body>
+</html>
